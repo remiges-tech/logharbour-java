@@ -56,7 +56,7 @@ public class LHLogger {
         log(objectMapper.writeValueAsString(logEntry));
     }
 
-    public void logChange(LogEntry logEntry) throws JsonProcessingException {
+    public void logDataChange(LogEntry logEntry) throws JsonProcessingException {
         log(objectMapper.writeValueAsString(logEntry));
     }
 

@@ -12,4 +12,19 @@ public class Constants {
     @Value("${kafka.topic}")
     private String kafkaTopic;
 
+    @Value("${elasticsearch.username}")
+    private String elasticUsername;
+
+    @Value("${elasticsearch.password}")
+    private String elasticPassword;
+
+    @Value("${elasticsearch.host}")
+    private String elasticsearchHost;
+
+    @Value("${elasticsearch.port}")
+    private int elasticsearchPort;
+
+    @Value("${elasticsearch.scheme}")
+    private String elasticsearchScheme;
+
 }

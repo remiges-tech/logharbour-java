@@ -14,3 +14,10 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 kafka:
   topic: logharbour
+  
+elasticsearch:
+  username: elastic
+  password: hm_UjCQlxvVP=iPx94pA
+  host: localhost
+  port: 9200
+  scheme: https
