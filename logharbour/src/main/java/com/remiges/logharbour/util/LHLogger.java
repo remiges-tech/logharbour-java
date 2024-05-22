@@ -11,12 +11,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
+import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
 import com.remiges.logharbour.service.KafkaService;
 
@@ -336,5 +342,68 @@ public class LHLogger {
         GetLogsResponse response = new GetLogsResponse(combinedLogs, combinedLogs.size(), null);
         return response;
     }
+    
+    
+    public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
+
+		try {
+			System.out.println("my first request data here !!!!!!!!!");
+			if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
+				throw new IllegalArgumentException("query token can not pass null or empty");
+			}
+			return this.processSearch(logharbourRequestBo);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return this.processSearch(logharbourRequestBo);
+	}	
+
+	@Autowired
+	  private ElasticsearchOperations elasticsearchOperations;	
+		  public List<LogEntry> processSearch(LogharbourRequestBo logharbourRequestBo) {
+	  
+			  System.out.println("query Builder");
+			  Query query1 = NativeQuery.builder()
+					  .withQuery(q -> q
+					    .match(m -> m
+					      .field("app")
+					      .query("Kra")
+					    )
+					  )
+					  .build();
+			  
+					SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query1, LogEntry.class);
+					List<LogEntry> loggerList = searchHits.getSearchHits()
+					    .stream()
+					    .map(SearchHit::getContent)
+					    .toList();
+			  
+			  return loggerList;
+			  
+		  }
+	
+//	// Pattern for attribute validation
+//    private static final Pattern PATTERN = Pattern.compile("^[a-z]{1,9}$");
+//
+//    // Allowed attributes
+//    private static final Map<String, Boolean> ALLOWED_ATTRIBUTES = new HashMap<>();
+//
+//    static {
+//        ALLOWED_ATTRIBUTES.put("app", true);
+//        ALLOWED_ATTRIBUTES.put("typeConst", true);
+//        ALLOWED_ATTRIBUTES.put("op", true);
+//        ALLOWED_ATTRIBUTES.put("instance", true);
+//        ALLOWED_ATTRIBUTES.put("class", true);
+//        ALLOWED_ATTRIBUTES.put("module", true);
+//        ALLOWED_ATTRIBUTES.put("pri", true);
+//        ALLOWED_ATTRIBUTES.put("status", true);
+//        ALLOWED_ATTRIBUTES.put("remote_ip", true);
+//        ALLOWED_ATTRIBUTES.put("system", true);
+//        ALLOWED_ATTRIBUTES.put("who", true);
+//        ALLOWED_ATTRIBUTES.put("field", true);
+//    }
+    
+    
+    
 
 }
