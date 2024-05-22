@@ -3,21 +3,21 @@ spring:
     name: logharbour
   kafka:
     consumer:
-      bootstrap-servers: 'localhost:9092'
+      bootstrap-servers: "localhost:9092"
       group-id: logger
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
-      bootstrap-servers: 'localhost:9092'
+      bootstrap-servers: "localhost:9092"
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 kafka:
   topic: logharbour
-  
+
 elasticsearch:
   username: elastic
-  password: hm_UjCQlxvVP=iPx94pA
+  password: jWddl*kneXQ_wEGVextg
   host: localhost
   port: 9200
   scheme: https

@@ -2,11 +2,16 @@ package com.remiges.logharbour.model;
 
 import java.util.UUID;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.Document;
+
 import lombok.Data;
 
 @Data
+@Document(indexName = "logger")
 public class LogEntry {
 
+    @Id
     private String id;
     private String app;
     private String system;
