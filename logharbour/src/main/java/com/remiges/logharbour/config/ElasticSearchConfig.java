@@ -19,37 +19,38 @@ import co.elastic.clients.transport.rest_client.RestClientTransport;
 @Configuration
 public class ElasticSearchConfig {
 
-    @Autowired
-    private Constants constants;
+        @Autowired
+        private Constants constants;
 
-    @Bean
-    public ElasticsearchClient elasticsearchClient() throws Exception {
-        final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials(constants.getElasticUsername(), constants.getElasticPassword()));
+        @Bean
+        public ElasticsearchClient elasticsearchClient() throws Exception {
+                final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                credentialsProvider.setCredentials(AuthScope.ANY,
+                                new UsernamePasswordCredentials(constants.getElasticUsername(),
+                                                constants.getElasticPassword()));
 
-        SSLContext sslContext = SSLContexts.custom()
-                .loadTrustMaterial((chain, authType) -> true) // Trust self-signed certificates
-                .build();
+                SSLContext sslContext = SSLContexts.custom()
+                                .loadTrustMaterial((chain, authType) -> true) // Trust self-signed certificates
+                                .build();
 
-        RestClient restClient = RestClient.builder(
-                new HttpHost(constants.getElasticsearchHost(), constants.getElasticsearchPort(),
-                        constants.getElasticsearchScheme()))
-                .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
-                        .setDefaultCredentialsProvider(credentialsProvider)
-                        .setSSLContext(sslContext))
-                .build();
+                RestClient restClient = RestClient.builder(
+                                new HttpHost(constants.getElasticsearchHost(), constants.getElasticsearchPort(),
+                                                constants.getElasticsearchScheme()))
+                                .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
+                                                .setDefaultCredentialsProvider(credentialsProvider)
+                                                .setSSLContext(sslContext))
+                                .build();
 
-        RestClientTransport transport = new RestClientTransport(
-                restClient,
-                new co.elastic.clients.json.jackson.JacksonJsonpMapper());
+                RestClientTransport transport = new RestClientTransport(
+                                restClient,
+                                new co.elastic.clients.json.jackson.JacksonJsonpMapper());
 
-        return new ElasticsearchClient(transport);
-    }
+                return new ElasticsearchClient(transport);
+        }
 
-    @Bean
-    public ElasticsearchTemplate elasticsearchTemplate(ElasticsearchClient elasticsearchClient) {
-        return new ElasticsearchTemplate(elasticsearchClient);
-    }
+        @Bean
+        public ElasticsearchTemplate elasticsearchTemplate(ElasticsearchClient elasticsearchClient) {
+                return new ElasticsearchTemplate(elasticsearchClient);
+        }
 
 }

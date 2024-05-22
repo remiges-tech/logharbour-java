@@ -17,7 +17,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
-import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.repository.LogEntryRepository;
 import com.remiges.logharbour.service.KafkaService;
 
@@ -187,7 +186,7 @@ public class LHLogger {
         return logs;
     }
 
- /**
+    /**
      * Retrieves log entries based on the provided filters.
      *
      * @param queryToken a token for querying logs (not currently used in
@@ -213,8 +212,7 @@ public class LHLogger {
             throws Exception {
         Instant fromts = null;
         Instant tots = null;
-        //Instant searchAfterInstant =null;
-
+        // Instant searchAfterInstant =null;
 
         // Parse the timestamps
         try {
@@ -333,12 +331,10 @@ public class LHLogger {
         if (op != null && !op.isEmpty()) {
             combinedLogs = combinedLogs.stream().filter(log -> op.equals(log.getOp())).collect(Collectors.toList());
         }
-        
+
         // Create and return the response
         GetLogsResponse response = new GetLogsResponse(combinedLogs, combinedLogs.size(), null);
         return response;
     }
-
-
 
 }

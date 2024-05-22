@@ -5,7 +5,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.config.Constants;
 import com.remiges.logharbour.model.LogEntry;
@@ -31,12 +30,11 @@ public class KafkaService {
     }
 
     @KafkaListener(topics = "${kafka.topic}")
-    public void cunsume(String msg) {
+    public void consumer(String msg) {
         try {
             LogEntry logEntry = objectMapper.readValue(msg, LogEntry.class);
             logEntryRepository.save(logEntry);
-
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

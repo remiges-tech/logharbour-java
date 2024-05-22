@@ -13,13 +13,12 @@ import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.util.LHLogger;
 
-@RestController("/logs")
+@RestController
 public class LHLoggerController {
 
     @Autowired
     private LHLogger logHarbour;
 
-    // get change controller
     @GetMapping("/data-changes")
     public List<LogEntry> getChanges(
             @RequestParam String queryToken,
@@ -37,6 +36,7 @@ public class LHLoggerController {
             throw new RuntimeException("Failed to retrieve log entries", e);
         }
     }
+
     @GetMapping("/data-logs")
     public GetLogsResponse getLogs(
             @RequestParam(required = true) String queryToken,
@@ -55,7 +55,8 @@ public class LHLoggerController {
             @RequestParam(required = false) String searchAfterDocID) throws Exception {
 
         // Call the service method to get the changes and return the response
-        return logHarbour.getLogs(queryToken, app, who, className, instance,op,fromts, tots, ndays,logType,remoteIP,pri);
+        return logHarbour.getLogs(queryToken, app, who, className, instance, op, fromts, tots, ndays, logType, remoteIP,
+                pri);
     }
 
 }
