@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class LogData {
-    private ChangeInfo changeDate;
+    private ChangeInfo changeData;
     private DebugInfo debugData;
     private String activeData;
 }

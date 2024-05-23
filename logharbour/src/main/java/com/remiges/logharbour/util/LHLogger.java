@@ -22,7 +22,10 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.remiges.logharbour.model.ChangeDetails;
+import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
+import com.remiges.logharbour.model.LogData;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
@@ -68,6 +71,12 @@ public class LHLogger {
         // writer.flush();
     }
 
+    // Method to create a new log entry
+    public LogEntry newLogEntry(String message, LogData data) {
+        return new LogEntry(message, message, message, null, message, message, message, message, 
+        message, null, message, message, message, null, data);
+    }
+
     public void logActivity(String message, LogEntry logEntry) throws JsonProcessingException {
         logEntry.setMsg(message);
         log(objectMapper.writeValueAsString(logEntry));
@@ -77,8 +86,25 @@ public class LHLogger {
         log(objectMapper.writeValueAsString(logEntry));
     }
 
-    public void logDataChange(LogEntry logEntry) throws JsonProcessingException {
-        log(objectMapper.writeValueAsString(logEntry));
+     // LogDataChange method logs a data change event.
+     public void logDataChange(String message, ChangeInfo data) {
+        for (ChangeDetails change : data.getChanges()) {
+            change.setOldValue(convertToString(change.getOldValue()));
+            change.setNewValue(convertToString(change.getNewValue()));
+        }
+
+        LogData logData = new LogData();
+        logData.setChangeData(data);
+
+        LogEntry entry = newLogEntry(message, logData);
+        entry.setLogType(LogEntry.LogType.CHANGE);
+
+        log(entry.toString());
+
+    }
+
+    private String convertToString(Object value) {
+        return value != null ? value.toString() : null;
     }
 
     public void close() {
