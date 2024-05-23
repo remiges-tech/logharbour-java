@@ -24,12 +24,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
+import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogData;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
 import com.remiges.logharbour.service.KafkaService;
+
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 
 @Service
 public class LHLogger {
@@ -422,61 +427,125 @@ public class LHLogger {
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
 
-        try {
-            System.out.println("my first request data here !!!!!!!!!");
-            if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
-                throw new IllegalArgumentException("query token can not pass null or empty");
-            }
-            return this.processSearch(logharbourRequestBo);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return this.processSearch(logharbourRequestBo);
-    }
+		try {
+			System.out.println("my first request data here !!!!!!!!!");
+			if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
+				throw new IllegalArgumentException("query token can not pass null or empty");
+			}
+			return this.processSearch(logharbourRequestBo,logharbourRequestBo.getSetAttr());
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return this.processSearch(logharbourRequestBo,logharbourRequestBo.getSetAttr());
+	}	
 
-    @Autowired
-    private ElasticsearchOperations elasticsearchOperations;
+	@Autowired
+	  private ElasticsearchOperations elasticsearchOperations;	
+		  public List<LogEntry> processSearch(LogharbourRequestBo logharbourRequestBo,String getsetAttr) {
 
-    public List<LogEntry> processSearch(LogharbourRequestBo logharbourRequestBo) {
+			  
+			  try {
+				  BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+				  
+			        if (logharbourRequestBo.getApp() != null && !logharbourRequestBo.getApp().isEmpty()) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.APP).query("Kra"))._toQuery());
+			        }
+			        if (logharbourRequestBo.getWho() != null && !logharbourRequestBo.getWho().isEmpty()) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.WHO).query("User3"))._toQuery());
+			        }
+			        if (logharbourRequestBo.getClassName() != null && !logharbourRequestBo.getClassName().isEmpty()) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.CLASS_NAME).query(logharbourRequestBo.getClassName()))._toQuery());
+			        }
+			        if (logharbourRequestBo.getOp() != null && !logharbourRequestBo.getOp().isEmpty()) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.OP).query(logharbourRequestBo.getOp()))._toQuery());
+			        }
+			        if (logharbourRequestBo.getRemoteIP() != null && !logharbourRequestBo.getRemoteIP().isEmpty()) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.REMOTE_IP).query(logharbourRequestBo.getRemoteIP()))._toQuery());
+			        } 
+			        if (logharbourRequestBo.getFromTs() != null) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.WHEN).query(logharbourRequestBo.getFromTs().toString()))._toQuery());
+			        }
+			        if (logharbourRequestBo.getToTs() != null) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.WHEN).query(logharbourRequestBo.getToTs().toString()))._toQuery());
+			        }
+//			        if (logharbourRequestBo.getNDays() == null) {
+//			            boolQueryBuilder.must(MatchQuery.of(m -> m.field("who").query(logharbourRequestBo.getNDays()))._toQuery());
+//			        }
+				    if (logharbourRequestBo.getInstance() != null) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.INSTANCE_ID).query(logharbourRequestBo.getInstance()))._toQuery());
+			        } 
+			        if (logharbourRequestBo.getType() != null && !logharbourRequestBo.getType().isEmpty()) {
+			            boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query(logharbourRequestBo.getType()))._toQuery());
+			        }
+		/*********************************************************************************************************************/
+//				  Query query = NativeQuery.builder()
+//			                .withQuery(boolQueryBuilder.build()._toQuery())
+//			                .build();
+//				  			  
+//						SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
+//						List<LogEntry> loggerList = searchHits.getSearchHits()
+//						    .stream()
+//						    .map(SearchHit::getContent)
+//						    .toList();
+//				  return loggerList;
+				  
+		/*********************************************************************************************************************/
+			        
+			        // Create aggregation based on getsetAttr with .keyword field
+			        Aggregation aggregation = Aggregation.of(a -> a
+			            .terms(t -> t.field(getsetAttr + ".keyword").size(10))
+			        );
 
-        System.out.println("query Builder");
-        Query query1 = NativeQuery.builder()
-                .withQuery(q -> q
-                        .match(m -> m
-                                .field("app")
-                                .query("Kra")))
-                .build();
+			       
+			        Query query = NativeQuery.builder()
+			                .withQuery(boolQueryBuilder.build()._toQuery())
+			                .withAggregation("agg", aggregation)
+			                .build();
 
-        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query1, LogEntry.class);
-        List<LogEntry> loggerList = searchHits.getSearchHits()
-                .stream()
-                .map(SearchHit::getContent)
-                .toList();
+			        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
 
-        return loggerList;
+//			        // Process aggregation results
+//			        Aggregations aggregations = searchHits.getAggregations();
+//			        if (aggregations != null && aggregations.get(getsetAttr) != null) {
+//			            // Process the aggregation results as needed
+//			        }
 
-    }
+			        List<LogEntry> loggerList = searchHits.getSearchHits()
+			                .stream()
+			                .map(SearchHit::getContent)
+			                .toList();
+			        return loggerList;
+			        
+			        
+				  
+				  }catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				  return null;
+			  
+		  }
+	
+//	// Pattern for attribute validation
+//    private static final Pattern PATTERN = Pattern.compile("^[a-z]{1,9}$");
+//
+//    // Allowed attributes
+//    private static final Map<String, Boolean> ALLOWED_ATTRIBUTES = new HashMap<>();
+//
+//    static {
+//        ALLOWED_ATTRIBUTES.put("app", true);
+//        ALLOWED_ATTRIBUTES.put("typeConst", true);
+//        ALLOWED_ATTRIBUTES.put("op", true);
+//        ALLOWED_ATTRIBUTES.put("instance", true);
+//        ALLOWED_ATTRIBUTES.put("class", true);
+//        ALLOWED_ATTRIBUTES.put("module", true);
+//        ALLOWED_ATTRIBUTES.put("pri", true);
+//        ALLOWED_ATTRIBUTES.put("status", true);
+//        ALLOWED_ATTRIBUTES.put("remote_ip", true);
+//        ALLOWED_ATTRIBUTES.put("system", true);
+//        ALLOWED_ATTRIBUTES.put("who", true);
+//        ALLOWED_ATTRIBUTES.put("field", true);
+//    }
+    
 
-    // // Pattern for attribute validation
-    // private static final Pattern PATTERN = Pattern.compile("^[a-z]{1,9}$");
-    //
-    // // Allowed attributes
-    // private static final Map<String, Boolean> ALLOWED_ATTRIBUTES = new
-    // HashMap<>();
-    //
-    // static {
-    // ALLOWED_ATTRIBUTES.put("app", true);
-    // ALLOWED_ATTRIBUTES.put("typeConst", true);
-    // ALLOWED_ATTRIBUTES.put("op", true);
-    // ALLOWED_ATTRIBUTES.put("instance", true);
-    // ALLOWED_ATTRIBUTES.put("class", true);
-    // ALLOWED_ATTRIBUTES.put("module", true);
-    // ALLOWED_ATTRIBUTES.put("pri", true);
-    // ALLOWED_ATTRIBUTES.put("status", true);
-    // ALLOWED_ATTRIBUTES.put("remote_ip", true);
-    // ALLOWED_ATTRIBUTES.put("system", true);
-    // ALLOWED_ATTRIBUTES.put("who", true);
-    // ALLOWED_ATTRIBUTES.put("field", true);
-    // }
 
 }
