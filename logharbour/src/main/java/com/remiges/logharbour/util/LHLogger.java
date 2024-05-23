@@ -73,8 +73,8 @@ public class LHLogger {
 
     // Method to create a new log entry
     public LogEntry newLogEntry(String message, LogData data) {
-        return new LogEntry(message, message, message, null, message, message, message, message, 
-        message, null, message, message, message, null, data);
+        return new LogEntry(message, message, message, null, message, message, message, message,
+                message, null, message, message, message, null, data);
     }
 
     public void logActivity(String message, LogEntry logEntry) throws JsonProcessingException {
@@ -86,8 +86,8 @@ public class LHLogger {
         log(objectMapper.writeValueAsString(logEntry));
     }
 
-     // LogDataChange method logs a data change event.
-     public void logDataChange(String message, ChangeInfo data) {
+    // LogDataChange method logs a data change event.
+    public void logDataChange(String message, ChangeInfo data) {
         for (ChangeDetails change : data.getChanges()) {
             change.setOldValue(convertToString(change.getOldValue()));
             change.setNewValue(convertToString(change.getNewValue()));
@@ -282,13 +282,16 @@ public class LHLogger {
      */
     public GetLogsResponse getLogs(String queryToken, String app, String who, String className, String instance,
             String op,
-            String fromtsStr, String totsStr, int ndays, String logType, String remoteIP, LogEntry.LogPriority pri)
+            String fromtsStr, String totsStr, int ndays, String logType, String remoteIP, LogEntry.LogPriority pri,
+            String searchAfterTs, String searchAfterDocId)
             throws Exception {
         Instant fromts = null;
         Instant tots = null;
         // Instant searchAfterInstant =null;
 
         // Parse the timestamps
+
+        int maxRecord = 5;
         try {
             if (fromtsStr != null && !fromtsStr.isEmpty()) {
                 fromts = Instant.parse(fromtsStr);
@@ -406,9 +409,15 @@ public class LHLogger {
             combinedLogs = combinedLogs.stream().filter(log -> op.equals(log.getOp())).collect(Collectors.toList());
         }
 
+        int totalLogs = combinedLogs.size();
+        int start = 0 * maxRecord;
+        int end = Math.min(start + maxRecord, totalLogs);
+
+        List<LogEntry> paginatedLogs = combinedLogs.subList(start, end);
         // Create and return the response
-        GetLogsResponse response = new GetLogsResponse(combinedLogs, combinedLogs.size(), null);
+        GetLogsResponse response = new GetLogsResponse(paginatedLogs, combinedLogs.size(), null);
         return response;
+
     }
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
