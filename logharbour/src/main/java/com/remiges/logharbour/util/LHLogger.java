@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -37,6 +39,8 @@ public class LHLogger {
 
     @Autowired
     private LogEntryRepository logEntryRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
 
     // Writing a log in a text file will used in fallback writer for logs
     private String logFileName = "logharbour.txt";
@@ -83,11 +87,28 @@ public class LHLogger {
 
     /**
      * Method to fetch log changes based on various parameters
+     * 
+     * 
+     * @param querytoken Query token (not used in this method).
+     * @param app        Application identifier.
+     * @param who        User identifier.
+     * @param className  Class name.
+     * @param instance   Instance identifier.
+     * @param field      Field identifier.
+     * @param fromtsStr  Start timestamp in ISO 8601 format.
+     * @param totsStr    End timestamp in ISO 8601 format.
+     * @param ndays      Number of days for which logs are required.
+     * @return List of log entries matching the specified parameters.
+     * @throws Exception If an error occurs during log retrieval or parameter
+     *                   parsing.
      */
 
     public List<LogEntry> getChanges(String querytoken, String app, String who, String className, String instance,
             String field,
             String fromtsStr, String totsStr, int ndays) throws Exception {
+        logger.debug(
+                "Entering getChanges method with parameters: querytoken={}, app={}, who={}, className={}, instance={}, field={}, fromtsStr={}, totsStr={}, ndays={}",
+                querytoken, app, who, className, instance, field, fromtsStr, totsStr, ndays);
 
         Instant fromts = null;
         Instant tots = null;
@@ -99,11 +120,16 @@ public class LHLogger {
         try {
             if (fromtsStr != null && !fromtsStr.isEmpty()) {
                 fromts = Instant.parse(fromtsStr);
+                logger.debug("Parsed fromts: {}", fromts);
+
             }
             if (totsStr != null && !totsStr.isEmpty()) {
                 tots = Instant.parse(totsStr);
+                logger.debug("Parsed tots: {}", tots);
             }
         } catch (DateTimeParseException e) {
+            logger.error("Invalid timestamp format: fromtsStr={}, totsStr={}", fromtsStr, totsStr, e);
+
             throw new IllegalArgumentException(
                     "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
         }
@@ -113,6 +139,8 @@ public class LHLogger {
          */
 
         if (fromts != null && tots != null && fromts.isAfter(tots)) {
+            logger.error("fromts must be before tots: fromts={}, tots={}", fromts, tots);
+
             throw new IllegalArgumentException("fromts must be before tots");
         }
 
@@ -133,6 +161,8 @@ public class LHLogger {
          */
         if (fromts != null && tots != null) {
 
+            logger.debug("Fetching logs between {} and {}", finalFromts, finalTots);
+
             // Fetch logs and filter them based on the provided time range
             logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType)
                     .stream()
@@ -143,6 +173,8 @@ public class LHLogger {
                     .collect(Collectors.toList());
         } else if (fromts != null) {
 
+            logger.debug("Fetching logs after {}", finalFromts);
+
             // If only fromts is specified, fetch logs and filter them to be after fromts
             logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType)
                     .stream()
@@ -150,6 +182,7 @@ public class LHLogger {
                     .collect(Collectors.toList());
         } else if (tots != null) {
 
+            logger.debug("Fetching logs before {}", finalTots);
             // If only tots is specified, fetch logs and filter them to be before tots
             logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType)
                     .stream()
@@ -161,6 +194,8 @@ public class LHLogger {
             Instant end = Instant.now();
             Instant start = end.minusSeconds(ndays * 86400L);
 
+            logger.debug("Fetching logs for the past {} days ({} to {})", ndays, start, end);
+
             // Fetch logs and filter them based on the calculated time range
             logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType)
                     .stream()
@@ -171,6 +206,8 @@ public class LHLogger {
                     .collect(Collectors.toList());
         } else {
 
+            logger.debug("Fetching all logs without time range filter");
+
             // If no time range or ndays is specified, fetch logs without any additional
             // filtering
             logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType);
@@ -178,9 +215,13 @@ public class LHLogger {
 
         // Optional filtering by 'who' and 'field'
         if (who != null && !who.isEmpty()) {
+
+            logger.debug("Filtering logs by who: {}", who);
             logs = logs.stream().filter(log -> who.equals(log.getWho())).toList();
         }
         if (field != null && !field.isEmpty()) {
+
+            logger.debug("Filtering logs by field: {}", field);
             logs = logs.stream()
                     .filter(log -> {
                         Object data = log.getData();
@@ -189,6 +230,7 @@ public class LHLogger {
                     .toList();
         }
 
+        logger.debug("Returning {} log entries", logs.size());
         return logs;
     }
 
@@ -342,68 +384,64 @@ public class LHLogger {
         GetLogsResponse response = new GetLogsResponse(combinedLogs, combinedLogs.size(), null);
         return response;
     }
-    
-    
+
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
 
-		try {
-			System.out.println("my first request data here !!!!!!!!!");
-			if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
-				throw new IllegalArgumentException("query token can not pass null or empty");
-			}
-			return this.processSearch(logharbourRequestBo);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return this.processSearch(logharbourRequestBo);
-	}	
+        try {
+            System.out.println("my first request data here !!!!!!!!!");
+            if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
+                throw new IllegalArgumentException("query token can not pass null or empty");
+            }
+            return this.processSearch(logharbourRequestBo);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return this.processSearch(logharbourRequestBo);
+    }
 
-	@Autowired
-	  private ElasticsearchOperations elasticsearchOperations;	
-		  public List<LogEntry> processSearch(LogharbourRequestBo logharbourRequestBo) {
-	  
-			  System.out.println("query Builder");
-			  Query query1 = NativeQuery.builder()
-					  .withQuery(q -> q
-					    .match(m -> m
-					      .field("app")
-					      .query("Kra")
-					    )
-					  )
-					  .build();
-			  
-					SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query1, LogEntry.class);
-					List<LogEntry> loggerList = searchHits.getSearchHits()
-					    .stream()
-					    .map(SearchHit::getContent)
-					    .toList();
-			  
-			  return loggerList;
-			  
-		  }
-	
-//	// Pattern for attribute validation
-//    private static final Pattern PATTERN = Pattern.compile("^[a-z]{1,9}$");
-//
-//    // Allowed attributes
-//    private static final Map<String, Boolean> ALLOWED_ATTRIBUTES = new HashMap<>();
-//
-//    static {
-//        ALLOWED_ATTRIBUTES.put("app", true);
-//        ALLOWED_ATTRIBUTES.put("typeConst", true);
-//        ALLOWED_ATTRIBUTES.put("op", true);
-//        ALLOWED_ATTRIBUTES.put("instance", true);
-//        ALLOWED_ATTRIBUTES.put("class", true);
-//        ALLOWED_ATTRIBUTES.put("module", true);
-//        ALLOWED_ATTRIBUTES.put("pri", true);
-//        ALLOWED_ATTRIBUTES.put("status", true);
-//        ALLOWED_ATTRIBUTES.put("remote_ip", true);
-//        ALLOWED_ATTRIBUTES.put("system", true);
-//        ALLOWED_ATTRIBUTES.put("who", true);
-//        ALLOWED_ATTRIBUTES.put("field", true);
-//    }
-    
-    
-    
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
+
+    public List<LogEntry> processSearch(LogharbourRequestBo logharbourRequestBo) {
+
+        System.out.println("query Builder");
+        Query query1 = NativeQuery.builder()
+                .withQuery(q -> q
+                        .match(m -> m
+                                .field("app")
+                                .query("Kra")))
+                .build();
+
+        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query1, LogEntry.class);
+        List<LogEntry> loggerList = searchHits.getSearchHits()
+                .stream()
+                .map(SearchHit::getContent)
+                .toList();
+
+        return loggerList;
+
+    }
+
+    // // Pattern for attribute validation
+    // private static final Pattern PATTERN = Pattern.compile("^[a-z]{1,9}$");
+    //
+    // // Allowed attributes
+    // private static final Map<String, Boolean> ALLOWED_ATTRIBUTES = new
+    // HashMap<>();
+    //
+    // static {
+    // ALLOWED_ATTRIBUTES.put("app", true);
+    // ALLOWED_ATTRIBUTES.put("typeConst", true);
+    // ALLOWED_ATTRIBUTES.put("op", true);
+    // ALLOWED_ATTRIBUTES.put("instance", true);
+    // ALLOWED_ATTRIBUTES.put("class", true);
+    // ALLOWED_ATTRIBUTES.put("module", true);
+    // ALLOWED_ATTRIBUTES.put("pri", true);
+    // ALLOWED_ATTRIBUTES.put("status", true);
+    // ALLOWED_ATTRIBUTES.put("remote_ip", true);
+    // ALLOWED_ATTRIBUTES.put("system", true);
+    // ALLOWED_ATTRIBUTES.put("who", true);
+    // ALLOWED_ATTRIBUTES.put("field", true);
+    // }
 
 }

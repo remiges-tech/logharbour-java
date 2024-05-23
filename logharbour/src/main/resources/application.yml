@@ -17,7 +17,14 @@ kafka:
 
 elasticsearch:
   username: elastic
-  password: 6s9D_pkiKV1Djl5BXy-Z
+  password: jWddl*kneXQ_wEGVextg
   host: localhost
   port: 9200
   scheme: https
+
+logging:
+  level:
+    root: INFO
+    "[com.remiges.logharbour]": DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
