@@ -1,5 +1,6 @@
 package com.remiges.logharbour.model;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
@@ -49,6 +50,12 @@ public class LogEntry {
         this.msg = msg;
         this.logType = logType;
         this.data = data;
+    }
+
+    public LogEntry(String app, String system, String module, LogPriority pri, String who, String op, Instant now,
+            String clazz, String instanceId, Status status, String error, String remoteIP, String message,
+            LogData data) {
+
     }
 
     public enum LogPriority {
