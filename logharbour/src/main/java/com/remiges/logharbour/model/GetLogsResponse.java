@@ -13,4 +13,6 @@ public class GetLogsResponse {
     private List<LogEntry> logs;
     private int nrec;
     private String err;
+    private String SearchAfterTs;
+    private String SearchAfterDocId;
 }
