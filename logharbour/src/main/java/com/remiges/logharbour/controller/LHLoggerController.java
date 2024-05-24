@@ -40,6 +40,8 @@ public class LHLoggerController {
             throw new RuntimeException("Failed to retrieve log entries", e);
         }
     }
+
+	
     @GetMapping("/data-logs")
     public GetLogsResponse getLogs(
             @RequestParam(required = true) String queryToken,
@@ -60,6 +62,9 @@ public class LHLoggerController {
         // Call the service method to get the changes and return the response
         return logHarbour.getLogs(queryToken, app, who, className, instance,op,fromts, tots, ndays,logType,remoteIP,pri,searchAfterTS,searchAfterDocID);
     }
+
+
+
 
 	/**
 	 * Retrieves log entries based on the specified parameters.
