@@ -8,7 +8,7 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
 @EnableElasticsearchRepositories
 @SpringBootApplication(exclude = {ElasticsearchDataAutoConfiguration.class})
 public class LogharbourApplication {
-
+ 
 	public static void main(String[] args) {
 		SpringApplication.run(LogharbourApplication.class, args);
 	}

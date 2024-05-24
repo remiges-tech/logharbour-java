@@ -6,5 +6,5 @@ import lombok.Data;
 public class LogData {
     private ChangeInfo changeData;
     private DebugInfo debugData;
-    private String activeData;
+    private String activityData;
 }
