@@ -6,9 +6,13 @@ import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+// @NoArgsConstructor
+@AllArgsConstructor
 @Document(indexName = "logger")
 public class LogEntry {
 
@@ -52,9 +56,26 @@ public class LogEntry {
         this.data = data;
     }
 
+    public LogEntry() {
+        super();
+    }
+
     public LogEntry(String app, String system, String module, LogPriority pri, String who, String op, Instant now,
             String clazz, String instanceId, Status status, String error, String remoteIP, String message,
             LogData data) {
+        this.app = app;
+        this.system = system;
+        this.module = module;
+        this.pri = pri;
+        this.who = who;
+        this.op = op;
+        this.className = clazz;
+        this.instanceId = instanceId;
+        this.status = status;
+        this.error = error;
+        this.remoteIP = remoteIP;
+        this.msg = message;
+        this.data = data;
 
     }
 
