@@ -3,6 +3,7 @@ package com.remiges.logharbour.util;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
+import com.remiges.logharbour.model.DebugInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogData;
 import com.remiges.logharbour.model.LogEntry;
@@ -61,7 +63,8 @@ public class LHLogger {
     private LoggerContext loggerContext;
 
     public void setLogDetails(String app, String system, String module, LogPriority pri, String who, String op,
-            String clazz, String instanceId, Status status, String error, String remoteIP,LoggerContext loggerContext) {
+            String clazz, String instanceId, Status status, String error, String remoteIP,
+            LoggerContext loggerContext) {
         this.app = app;
         this.system = system;
         this.module = module;
@@ -89,7 +92,6 @@ public class LHLogger {
 
     @Autowired
     private LogEntryRepository logEntryRepository;
-
 
     private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
 
@@ -156,6 +158,45 @@ public class LHLogger {
 
         log(objectMapper.writeValueAsString(entry));
 
+    }
+
+    public void logDebug(String message, Object data) throws JsonProcessingException {
+        if (!loggerContext.isDebugMode()) {
+            return; // Skip logging if debugMode is not enabled
+        }
+        LogEntry entry;
+        DebugInfo debugInfo = new DebugInfo();
+        debugInfo.setPid(getPid());
+        debugInfo.setRuntime(System.getProperty("java.version"));
+        debugInfo.setData(data.toString()); // Convert the entire data to a JSON string
+
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        if (stackTrace.length > 2) {
+            StackTraceElement caller = stackTrace[2];
+            debugInfo.setFileName(caller.getFileName());
+            debugInfo.setLineNumber(caller.getLineNumber());
+            debugInfo.setFunctionName(caller.getMethodName());
+            debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
+        }
+
+        LogData logData = new LogData();
+        logData.setDebugData(debugInfo);
+        entry = newLogEntry(message, logData);
+        entry.setLogType(LogEntry.LogType.DEBUG);
+        log(objectMapper.writeValueAsString(entry));
+    }
+
+    private int getPid() {
+        String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+        return Integer.parseInt(jvmName.split("@")[0]);
+    }
+
+    private String getStackTraceAsString(StackTraceElement[] stackTrace) {
+        StringBuilder sb = new StringBuilder();
+        for (StackTraceElement element : stackTrace) {
+            sb.append(element.toString()).append("\n");
+        }
+        return sb.toString();
     }
 
     private String convertToString(Object value) {

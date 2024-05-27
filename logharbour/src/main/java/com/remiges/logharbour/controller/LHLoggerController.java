@@ -181,4 +181,20 @@ public class LHLoggerController {
 		return "Change Data log posted Successfully";
 	}
 
+	@PostMapping("/debug-log")
+	public String postDebugLogs() throws JsonProcessingException {
+
+		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
+		loggerContext.setDebugMode(true);
+
+		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
+
+		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
+				loggerContext);
+
+		logHarbour.logDebug("Log Activitiy Test", loginUser);
+		return "Debug Data log posted Successfully";
+	}
+
 }
