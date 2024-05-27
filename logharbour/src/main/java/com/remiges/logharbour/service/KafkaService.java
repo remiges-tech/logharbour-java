@@ -26,17 +26,26 @@ public class KafkaService {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     public void producerLog(String msg) {
-        System.out.println(" Sending data to Kafka Topic : " +msg);
+        System.out.println(" Sending data to Kafka Topic : " + msg);
         kafkaTemplate.send(constants.getKafkaTopic(), msg);
     }
 
+    /**
+     * Consumes messages from the specified Kafka topic, deserializes them into
+     * LogEntry objects,
+     * and saves them to the Elasticsearch repository.
+     *
+     * @param msg the message received from the Kafka topic
+     */
     @KafkaListener(topics = "${kafka.topic}")
     public void consumer(String msg) {
         try {
             LogEntry logEntry = objectMapper.readValue(msg, LogEntry.class);
-            System.out.println(" Data receive from Kafka Topic is: " +msg);
+            System.out.println(" Data receive from Kafka Topic is: " + msg);
+
             logEntryRepository.save(logEntry);
-            System.out.println("Data saved to Elastic search :" +msg);
+
+            System.out.println("Data saved to Elastic search :" + msg);
         } catch (Exception e) {
             e.printStackTrace();
         }

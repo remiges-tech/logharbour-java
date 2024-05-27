@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.remiges.logharbour.config.Constants;
 import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.model.ChangeDetails;
@@ -62,6 +63,46 @@ public class LHLogger {
     private String remoteIP;
     private LoggerContext loggerContext;
 
+    private String logFileName = "logharbour.txt";
+    private PrintWriter writer;
+    private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private KafkaService kafkaService;
+
+    @Autowired
+    private LogEntryRepository logEntryRepository;
+
+    /**
+     * Default constructor that initializes the writer for the log file.
+     */
+    public LHLogger() {
+        try {
+            this.writer = new PrintWriter(new FileWriter(logFileName, true));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Sets the log details for the logger.
+     *
+     * @param app           Application name.
+     * @param system        System name.
+     * @param module        Module name.
+     * @param pri           Log priority.
+     * @param who           User or service performing the operation.
+     * @param op            Operation being performed.
+     * @param clazz         Class name.
+     * @param instanceId    Instance ID.
+     * @param status        Status of the operation.
+     * @param error         Error message.
+     * @param remoteIP      Remote IP address.
+     * @param loggerContext Logger context.
+     */
     public void setLogDetails(String app, String system, String module, LogPriority pri, String who, String op,
             String clazz, String instanceId, Status status, String error, String remoteIP,
             LoggerContext loggerContext) {
@@ -84,30 +125,12 @@ public class LHLogger {
                 remoteIP, message, data);
     }
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private KafkaService kafkaService;
-
-    @Autowired
-    private LogEntryRepository logEntryRepository;
-
-    private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
-
-    // Writing a log in a text file will used in fallback writer for logs
-    private String logFileName = "logharbour.txt";
-    private PrintWriter writer;
-
-    public LHLogger() {
-        try {
-            this.writer = new PrintWriter(new FileWriter(logFileName, true));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // method will push logs in kafka producer
+    /**
+     * Logs a message by pushing it to Kafka. If Kafka is unavailable, logs to a
+     * file.
+     *
+     * @param logMessage The log message to be logged.
+     */
     private void log(String logMessage) {
         try {
             kafkaService.producerLog(logMessage);
@@ -119,11 +142,14 @@ public class LHLogger {
 
     }
 
-    public void logActivity(String message, LogEntry logEntry) throws JsonProcessingException {
-        logEntry.setMsg(message);
-        log(objectMapper.writeValueAsString(logEntry));
-    }
-
+    /**
+     * Logs an activity event with data.
+     *
+     * @param message The log message.
+     * @param data    The data associated with the activity.
+     * @throws JsonProcessingException if an error occurs while processing the log
+     *                                 entry.
+     */
     public void logActivity(String message, Object data) throws JsonProcessingException {
 
         LogData logData = null;
@@ -140,10 +166,14 @@ public class LHLogger {
         log(objectMapper.writeValueAsString(entry));
     }
 
-    public void logDebug(LogEntry logEntry) throws JsonProcessingException {
-        log(objectMapper.writeValueAsString(logEntry));
-    }
-
+    /**
+     * Logs a data change event.
+     *
+     * @param message The log message.
+     * @param data    The change information.
+     * @throws JsonProcessingException if an error occurs while processing the log
+     *                                 entry.
+     */
     public void logDataChange(String message, ChangeInfo data) throws JsonProcessingException {
         for (ChangeDetails change : data.getChanges()) {
             change.setOldValue(convertToString(change.getOldValue()));
@@ -160,6 +190,14 @@ public class LHLogger {
 
     }
 
+    /**
+     * Logs a debug event with data.
+     *
+     * @param message The log message.
+     * @param data    The debug data.
+     * @throws JsonProcessingException if an error occurs while processing the log
+     *                                 entry.
+     */
     public void logDebug(String message, Object data) throws JsonProcessingException {
         if (!loggerContext.isDebugMode()) {
             return; // Skip logging if debugMode is not enabled
@@ -186,11 +224,22 @@ public class LHLogger {
         log(objectMapper.writeValueAsString(entry));
     }
 
+    /**
+     * Gets the process ID of the current Java process.
+     *
+     * @return The process ID.
+     */
     private int getPid() {
         String jvmName = ManagementFactory.getRuntimeMXBean().getName();
         return Integer.parseInt(jvmName.split("@")[0]);
     }
 
+    /**
+     * Converts a stack trace to a string.
+     *
+     * @param stackTrace The stack trace elements.
+     * @return The stack trace as a string.
+     */
     private String getStackTraceAsString(StackTraceElement[] stackTrace) {
         StringBuilder sb = new StringBuilder();
         for (StackTraceElement element : stackTrace) {
@@ -199,10 +248,19 @@ public class LHLogger {
         return sb.toString();
     }
 
+    /**
+     * Converts an object to a string.
+     *
+     * @param value The object to convert.
+     * @return The string representation of the object.
+     */
     private String convertToString(Object value) {
         return value != null ? value.toString() : null;
     }
 
+    /**
+     * Closes the writer.
+     */
     public void close() {
         writer.close();
     }
@@ -236,16 +294,11 @@ public class LHLogger {
         try {
 
             // Parsing start timestamp
-            if (fromtsStr != null && !fromtsStr.isEmpty()) {
-                fromts = Instant.parse(fromtsStr);
-                logger.debug("Parsed fromts: {}", fromts);
-            }
+            fromts = (fromtsStr != null && !fromtsStr.isEmpty()) ? Instant.parse(fromtsStr) : fromts;
 
             // Parsing end timestamp
-            if (totsStr != null && !totsStr.isEmpty()) {
-                tots = Instant.parse(totsStr);
-                logger.debug("Parsed tots: {}", tots);
-            }
+            tots = (totsStr != null && !totsStr.isEmpty()) ? Instant.parse(totsStr) : tots;
+
         } catch (DateTimeParseException e) {
 
             // Handling invalid timestamp format

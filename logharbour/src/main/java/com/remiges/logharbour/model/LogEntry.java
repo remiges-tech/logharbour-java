@@ -8,10 +8,11 @@ import org.springframework.data.elasticsearch.annotations.Document;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
-
+@NoArgsConstructor
 @Document(indexName = "logger")
 public class LogEntry {
 
@@ -53,10 +54,6 @@ public class LogEntry {
         this.msg = msg;
         this.logType = logType;
         this.data = data;
-    }
-
-    public LogEntry() {
-        super();
     }
 
     public LogEntry(String app, String system, String module, LogPriority pri, String who, String op, Instant now,

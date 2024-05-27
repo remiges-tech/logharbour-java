@@ -10,9 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LogharbourRequestBo {
-	
-	
-	private String queryToken;
+    private String queryToken;
     private String app;
     private String type;
     private String who;
