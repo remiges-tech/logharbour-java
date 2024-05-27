@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class GetLogsResponse {
     private List<LogEntry> logs;
+    private int totalLogs;
     private int nrec;
     private String err;
     private String SearchAfterTs;

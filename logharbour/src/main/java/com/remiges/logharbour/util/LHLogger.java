@@ -473,7 +473,7 @@ public class LHLogger {
         }
 
         // Create and return the response
-        return new GetLogsResponse(paginatedLogs, totalLogs, null, SearchAfterTs, SearchAfterDocId);
+        return new GetLogsResponse(paginatedLogs, totalLogs, end, null, SearchAfterTs, SearchAfterDocId);
     }
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
