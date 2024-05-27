@@ -5,9 +5,10 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class ChangeDetails {
-    private String field;
-    private Object oldValue;
-    private Object newValue;
+public class LoginUser {
+
+    private String id;
+    private String name;
+    private String mobile;
 
 }

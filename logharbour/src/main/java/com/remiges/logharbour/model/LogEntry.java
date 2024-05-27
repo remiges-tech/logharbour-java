@@ -44,7 +44,7 @@ public class LogEntry {
         this.pri = pri;
         this.who = who;
         this.op = op;
-        this.when = when;
+        this.when = Instant.now().toString();
         this.className = className;
         this.instanceId = instanceId;
         this.status = status;
@@ -62,11 +62,13 @@ public class LogEntry {
     public LogEntry(String app, String system, String module, LogPriority pri, String who, String op, Instant now,
             String clazz, String instanceId, Status status, String error, String remoteIP, String message,
             LogData data) {
+        this.id = UUID.randomUUID().toString();
         this.app = app;
         this.system = system;
         this.module = module;
         this.pri = pri;
         this.who = who;
+        this.when = Instant.now().toString();
         this.op = op;
         this.className = clazz;
         this.instanceId = instanceId;

@@ -2,6 +2,7 @@ package com.remiges.logharbour.controller;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,60 +12,65 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.remiges.logharbour.model.ChangeDetails;
+import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
+import com.remiges.logharbour.model.LogEntry.LogPriority;
+import com.remiges.logharbour.model.LogEntry.Status;
+import com.remiges.logharbour.model.LogPriorityLevels;
+import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
+import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.util.LHLogger;
 
 @RestController
 public class LHLoggerController {
 
-    @Autowired
-    private LHLogger logHarbour;
+	@Autowired
+	private LHLogger logHarbour;
 
-    // get change controller
-    @GetMapping("/data-changes")
-    public List<LogEntry> getChanges(
-            @RequestParam String queryToken,
-            @RequestParam String app,
-            @RequestParam(required = false) String who,
-            @RequestParam String className,
-            @RequestParam String instance,
-            @RequestParam(required = false) String field,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
-            @RequestParam(required = false, defaultValue = "0") int ndays) throws Exception {
-        try {
-            return logHarbour.getChanges(queryToken, app, who, className, instance, field, fromts, tots, ndays);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to retrieve log entries", e);
-        }
-    }
+	// get change controller
+	@GetMapping("/data-changes")
+	public List<LogEntry> getChanges(
+			@RequestParam String queryToken,
+			@RequestParam String app,
+			@RequestParam(required = false) String who,
+			@RequestParam String className,
+			@RequestParam String instance,
+			@RequestParam(required = false) String field,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
+			@RequestParam(required = false, defaultValue = "0") int ndays) throws Exception {
+		try {
+			return logHarbour.getChanges(queryToken, app, who, className, instance, field, fromts, tots, ndays);
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to retrieve log entries", e);
+		}
+	}
 
-	
-    @GetMapping("/data-logs")
-    public GetLogsResponse getLogs(
-            @RequestParam(required = true) String queryToken,
-            @RequestParam(required = false) String app,
-            @RequestParam(required = false) String who,
-            @RequestParam(required = false) String className,
-            @RequestParam(required = false) String instance,
-            @RequestParam(required = false) String op,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
-            @RequestParam(required = false, defaultValue = "0") int ndays,
-            @RequestParam(required = false) String logType,
-            @RequestParam(required = false) String remoteIP,
-            @RequestParam(required = false) LogEntry.LogPriority pri,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String searchAfterTS,
-            @RequestParam(required = false) String searchAfterDocID) throws Exception {
+	@GetMapping("/data-logs")
+	public GetLogsResponse getLogs(
+			@RequestParam(required = true) String queryToken,
+			@RequestParam(required = false) String app,
+			@RequestParam(required = false) String who,
+			@RequestParam(required = false) String className,
+			@RequestParam(required = false) String instance,
+			@RequestParam(required = false) String op,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
+			@RequestParam(required = false, defaultValue = "0") int ndays,
+			@RequestParam(required = false) String logType,
+			@RequestParam(required = false) String remoteIP,
+			@RequestParam(required = false) LogEntry.LogPriority pri,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String searchAfterTS,
+			@RequestParam(required = false) String searchAfterDocID) throws Exception {
 
-        // Call the service method to get the changes and return the response
-        return logHarbour.getLogs(queryToken, app, who, className, instance,op,fromts, tots, ndays,logType,remoteIP,pri,searchAfterTS,searchAfterDocID);
-    }
-
-
-
+		// Call the service method to get the changes and return the response
+		return logHarbour.getLogs(queryToken, app, who, className, instance, op, fromts, tots, ndays, logType, remoteIP,
+				pri, searchAfterTS, searchAfterDocID);
+	}
 
 	/**
 	 * Retrieves log entries based on the specified parameters.
@@ -110,7 +116,7 @@ public class LHLoggerController {
 	 * @throws Exception
 	 */
 	@PostMapping("/getlogs")
-	public List<LogEntry>  getSet(@RequestParam(required = true) String queryToken,
+	public List<LogEntry> getSet(@RequestParam(required = true) String queryToken,
 			@RequestParam(required = false) String app, @RequestParam(required = false) String type,
 			@RequestParam(required = false) String who, @RequestParam(required = false) String clazz,
 			@RequestParam(required = false) String instance, @RequestParam(required = false) String op,
@@ -119,9 +125,10 @@ public class LHLoggerController {
 			@RequestParam(required = false) LogPri_t pri, @RequestParam(required = false) String setattr)
 			throws Exception {
 
-		return logHarbour.getSetlogs(convertRequestParamToRequestForm(queryToken, app, type, who, clazz, instance, op, fromts,
-				tots, ndays, remoteIP, pri, setattr));
-		 
+		return logHarbour
+				.getSetlogs(convertRequestParamToRequestForm(queryToken, app, type, who, clazz, instance, op, fromts,
+						tots, ndays, remoteIP, pri, setattr));
+
 	}
 
 	public static LogharbourRequestBo convertRequestParamToRequestForm(String querytoken, String app, String type,
@@ -134,6 +141,44 @@ public class LHLoggerController {
 	public enum LogPri_t {
 		// Define the enum constants based on your use case
 		LOW, MEDIUM, HIGH
+	}
+
+	@PostMapping("/activity-log")
+	public String postActivityLogs() throws JsonProcessingException {
+
+		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
+		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
+
+		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
+				loggerContext);
+
+		logHarbour.logActivity("Log Activitiy Test", loginUser);
+		return "Activity Data log posted Successfully";
+
+	}
+
+	@PostMapping("/changes-log")
+	public String postChangeLogs() throws JsonProcessingException {
+
+		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
+
+		ChangeInfo changeInfo = new ChangeInfo();
+		changeInfo.setEntity(loginUser.getName());
+		changeInfo.setOp("Updating a User Details");
+
+		List<ChangeDetails> changeDetails = new ArrayList<>();
+		changeDetails.add(new ChangeDetails("Mobile", loginUser.getMobile(), "7977712312"));
+		changeInfo.setChanges(changeDetails);
+
+		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
+
+		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
+				loggerContext);
+		logHarbour.logDataChange("Log Data change", changeInfo);
+
+		return "Change Data log posted Successfully";
 	}
 
 }

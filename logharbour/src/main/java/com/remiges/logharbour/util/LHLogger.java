@@ -33,6 +33,7 @@ import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
+import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
 import com.remiges.logharbour.service.KafkaService;
@@ -40,8 +41,10 @@ import com.remiges.logharbour.service.KafkaService;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import lombok.AllArgsConstructor;
 
 @Service
+@AllArgsConstructor
 public class LHLogger {
 
     private String app;
@@ -55,9 +58,10 @@ public class LHLogger {
     private Status status;
     private String error;
     private String remoteIP;
+    private LoggerContext loggerContext;
 
-    public LHLogger(String app, String system, String module, LogPriority pri, String who, String op,
-            String clazz, String instanceId, Status status, String error, String remoteIP) {
+    public void setLogDetails(String app, String system, String module, LogPriority pri, String who, String op,
+            String clazz, String instanceId, Status status, String error, String remoteIP,LoggerContext loggerContext) {
         this.app = app;
         this.system = system;
         this.module = module;
@@ -69,6 +73,7 @@ public class LHLogger {
         this.status = status;
         this.error = error;
         this.remoteIP = remoteIP;
+        this.loggerContext = loggerContext;
     }
 
     public LogEntry newLogEntry(String message, LogData data) {
@@ -84,6 +89,7 @@ public class LHLogger {
 
     @Autowired
     private LogEntryRepository logEntryRepository;
+
 
     private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
 
@@ -101,14 +107,14 @@ public class LHLogger {
 
     // method will push logs in kafka producer
     private void log(String logMessage) {
-
-        // writer.println(logMessage); // function to write log in file
         try {
             kafkaService.producerLog(logMessage);
         } catch (Exception e) {
+            writer.println(logMessage);
+            writer.flush();
             e.printStackTrace();
         }
-        // writer.flush();
+
     }
 
     public void logActivity(String message, LogEntry logEntry) throws JsonProcessingException {
@@ -136,8 +142,7 @@ public class LHLogger {
         log(objectMapper.writeValueAsString(logEntry));
     }
 
-    // LogDataChange method logs a data change event.
-    public void logDataChange(String message, ChangeInfo data) {
+    public void logDataChange(String message, ChangeInfo data) throws JsonProcessingException {
         for (ChangeDetails change : data.getChanges()) {
             change.setOldValue(convertToString(change.getOldValue()));
             change.setNewValue(convertToString(change.getNewValue()));
@@ -149,7 +154,7 @@ public class LHLogger {
         LogEntry entry = newLogEntry(message, logData);
         entry.setLogType(LogEntry.LogType.CHANGE);
 
-        log(entry.toString());
+        log(objectMapper.writeValueAsString(entry));
 
     }
 
