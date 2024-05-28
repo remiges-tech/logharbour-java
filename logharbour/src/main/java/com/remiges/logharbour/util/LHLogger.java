@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.remiges.logharbour.config.Constants;
 import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.model.ChangeDetails;
