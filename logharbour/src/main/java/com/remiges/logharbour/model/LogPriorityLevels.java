@@ -3,6 +3,9 @@ package com.remiges.logharbour.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+/**
+ * Enum representing different levels of log priorities.
+ */
 public enum LogPriorityLevels {
     DEBUG2(1, "Debug2"),
     DEBUG1(2, "Debug1"),
@@ -17,6 +20,12 @@ public enum LogPriorityLevels {
     private final int level;
     private final String name;
 
+    /**
+     * Constructor for LogPriorityLevels.
+     *
+     * @param level the numerical level of the log priority
+     * @param name  the name of the log priority
+     */
     LogPriorityLevels(int level, String name) {
         this.level = level;
         this.name = name;
@@ -27,6 +36,12 @@ public enum LogPriorityLevels {
         return name;
     }
 
+    /**
+     * Creates a LogPriorityLevels instance from the provided name.
+     *
+     * @param name the name of the log priority level
+     * @return the corresponding LogPriorityLevels instance, or UNKNOWN if no match is found
+     */
     @JsonCreator
     public static LogPriorityLevels fromName(String name) {
         for (LogPriorityLevels priority : LogPriorityLevels.values()) {
