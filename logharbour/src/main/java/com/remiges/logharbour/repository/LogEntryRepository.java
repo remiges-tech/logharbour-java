@@ -32,5 +32,15 @@ public interface LogEntryRepository extends ElasticsearchRepository<LogEntry, St
                         "{\"range\": {\"when\": {\"gte\": \"?4\", \"lte\": \"?5\"}}}" +
                         "]}}")
         List<LogEntry> findLogEntries(String app, String className, String instanceId, String who, String from,
-                        String to);
+        String to);
+
+
+        @Query("{\"bool\":{\"must\":[{\"match\":{\"logType\":\"ACTIVITY\"}},{\"range\":{\"when\":{\"gte\":\"?0\",\"lte\":\"?1\"}}},{\"match\":{\"who\":\"?2\"}},{\"match\":{\"pri\":\"?3\"}},{\"match\":{\"remoteIP\":\"?4\"}},{\"match\":{\"op\":\"?5\"}}],\"must_not\":[],\"should\":[],\"filter\":[]}}")
+        List<LogEntry> findActivityLogs(String fromts, String tots, String who, String pri, String remoteIP, String op);
+    
+    
+        @Query("{\"bool\":{\"must\":[{\"match\":{\"logType\":\"CHANGE\"}},{\"range\":{\"when\":{\"gte\":\"?0\",\"lte\":\"?1\"}}},{\"match\":{\"who\":\"?2\"}},{\"match\":{\"pri\":\"?3\"}},{\"match\":{\"remoteIP\":\"?4\"}},{\"match\":{\"op\":\"?5\"}}],\"must_not\":[],\"should\":[],\"filter\":[]}}")
+        List<LogEntry> findChangeLogs(String fromts, String tots, String who, String pri, String remoteIP, String op);
+
+
 }
