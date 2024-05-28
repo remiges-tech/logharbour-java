@@ -289,86 +289,49 @@ public class LHLogger {
      * @throws Exception If an error occurs during processing.
      */
 
-    public List<LogEntry> getChanges(String querytoken, String app, String who, String className, String instance,
-            String field,
-            String fromtsStr, String totsStr, int ndays) throws Exception {
-        logger.debug(
-                "Entering getChanges method with parameters: querytoken={}, app={}, who={}, className={}, instance={}, field={}, fromtsStr={}, totsStr={}, ndays={}",
-                querytoken, app, who, className, instance, field, fromtsStr, totsStr, ndays);
+    public List<LogEntry> getChanges(String queryToken, String app, String who, String className, String instance,
+            String field, String fromtsStr, String totsStr, int ndays) throws Exception {
 
         Instant fromts = null;
         Instant tots = null;
 
         try {
-
-            // Parsing start timestamp
-            fromts = (fromtsStr != null && !fromtsStr.isEmpty()) ? Instant.parse(fromtsStr) : fromts;
-
-            // Parsing end timestamp
-            tots = (totsStr != null && !totsStr.isEmpty()) ? Instant.parse(totsStr) : tots;
-
-        } catch (DateTimeParseException e) {
-
-            // Handling invalid timestamp format
-            logger.error("Invalid timestamp format: fromtsStr={}, totsStr={}", fromtsStr, totsStr, e);
-
+            fromts = (fromtsStr != null && !fromtsStr.isEmpty()) ? Instant.parse(fromtsStr) : null;
+            tots = (totsStr != null && !totsStr.isEmpty()) ? Instant.parse(totsStr) : null;
+        } catch (Exception e) {
             throw new IllegalArgumentException(
                     "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
         }
 
-        // Validating timestamp range
         if (fromts != null && tots != null && fromts.isAfter(tots)) {
-            logger.error("fromts must be before tots: fromts={}, tots={}", fromts, tots);
             throw new InvalidTimestampRangeException("fromts must be before tots");
         }
 
         List<LogEntry> logs = new ArrayList<>();
-
         LogEntry.LogType logType = LogEntry.LogType.CHANGE;
 
-        // Fetching logs based on specified parameters
         if (fromts != null && tots != null) {
-            logger.debug("Fetching logs between {} and {}", fromts, tots);
-
-            logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogTypeAndWhenBetween(app, className,
-                    instance, logType, fromts.toString(), tots.toString());
+            logs = logEntryRepository.findLogEntries(app, className, instance, who, fromts.toString(), tots.toString());
         } else if (fromts != null) {
-            logger.debug("Fetching logs after {}", fromts);
-
-            logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogTypeAndWhenAfter(app, className, instance,
-                    logType, fromts.toString());
-
+            logs = logEntryRepository.findLogEntries(app, className, instance, who, fromts.toString(),
+                    Instant.now().toString());
         } else if (tots != null) {
-
-            logger.debug("Fetching logs before {}", tots);
-
-            logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogTypeAndWhenBefore(app, className,
-                    instance, logType, tots.toString());
+            logs = logEntryRepository.findLogEntries(app, className, instance, who, Instant.EPOCH.toString(),
+                    tots.toString());
         } else if (ndays > 0) {
-            // Fetching logs for the past ndays
             Instant end = Instant.now();
             Instant start = end.minusSeconds(ndays * 86400L);
-
-            logger.debug("Fetching logs for the past {} days ({} to {})", ndays, start, end);
-
-            logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogTypeAndWhenBetween(app, className,
-                    instance, logType, start.toString(), end.toString());
+            logs = logEntryRepository.findLogEntries(app, className, instance, who, start.toString(), end.toString());
         } else {
-            // Fetching all logs without time range filter
-            logger.debug("Fetching all logs without time range filter");
-
             logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType);
         }
 
-        // Optional filtering by 'who'
         if (who != null && !who.isEmpty()) {
-            logger.debug("Filtering logs by who: {}", who);
-            logs = logs.stream().filter(log -> who.equals(log.getWho())).collect(Collectors.toList());
+            logs = logEntryRepository.findLogEntries(app, className, instance, who, Instant.EPOCH.toString(),
+                    Instant.now().toString());
         }
 
-        // Optional filtering by 'field'
         if (field != null && !field.isEmpty()) {
-            logger.debug("Filtering logs by field: {}", field);
             logs = logs.stream()
                     .filter(log -> {
                         Object data = log.getData();
@@ -377,7 +340,6 @@ public class LHLogger {
                     .collect(Collectors.toList());
         }
 
-        logger.debug("Returning {} log entries", logs.size());
         return logs;
     }
 
