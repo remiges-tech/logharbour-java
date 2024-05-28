@@ -154,6 +154,7 @@ public class LHLogger {
         LogData logData = null;
         LogEntry entry;
         if (data != null) {
+            // Convert the data to a JSON string
             String activityData = convertToString(data);
             logData = new LogData();
             logData.setActivityData(activityData);
@@ -174,10 +175,11 @@ public class LHLogger {
      *                                 entry.
      */
     public void logDataChange(String message, ChangeInfo data) throws JsonProcessingException {
-        for (ChangeDetails change : data.getChanges()) {
+
+        data.getChanges().forEach(change -> {
             change.setOldValue(convertToString(change.getOldValue()));
             change.setNewValue(convertToString(change.getNewValue()));
-        }
+        });
 
         LogData logData = new LogData();
         logData.setChangeData(data);
@@ -198,29 +200,36 @@ public class LHLogger {
      *                                 entry.
      */
     public void logDebug(String message, Object data) throws JsonProcessingException {
-        if (!loggerContext.isDebugMode()) {
-            return; // Skip logging if debugMode is not enabled
-        }
-        LogEntry entry;
-        DebugInfo debugInfo = new DebugInfo();
-        debugInfo.setPid(getPid());
-        debugInfo.setRuntime(System.getProperty("java.version"));
-        debugInfo.setData(data.toString()); // Convert the entire data to a JSON string
 
-        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-        if (stackTrace.length > 2) {
-            StackTraceElement caller = stackTrace[2];
-            debugInfo.setFileName(caller.getFileName());
-            debugInfo.setLineNumber(caller.getLineNumber());
-            debugInfo.setFunctionName(caller.getMethodName());
-            debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
-        }
+        if (loggerContext.isDebugMode()) {
+            LogEntry entry;
+            DebugInfo debugInfo = new DebugInfo();
+            debugInfo.setPid(getPid());
+            debugInfo.setRuntime(System.getProperty("java.version"));
+            debugInfo.setData(data.toString()); // Convert the entire data to a JSON string
 
-        LogData logData = new LogData();
-        logData.setDebugData(debugInfo);
-        entry = newLogEntry(message, logData);
-        entry.setLogType(LogEntry.LogType.DEBUG);
-        log(objectMapper.writeValueAsString(entry));
+            // Retrieve the current thread's stack trace elements.
+            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+            /**
+             * Check if the stack trace has more than two elements.
+             * The first two elements typically represent `getStackTrace` and `getThread`
+             * calls,
+             * so the third element (index 2) will be the actual caller of this method.
+             */
+            if (stackTrace.length > 2) {
+                StackTraceElement caller = stackTrace[2];
+                debugInfo.setFileName(caller.getFileName());
+                debugInfo.setLineNumber(caller.getLineNumber());
+                debugInfo.setFunctionName(caller.getMethodName());
+                debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
+            }
+
+            LogData logData = new LogData();
+            logData.setDebugData(debugInfo);
+            entry = newLogEntry(message, logData);
+            entry.setLogType(LogEntry.LogType.DEBUG);
+            log(objectMapper.writeValueAsString(entry));
+        }
     }
 
     /**
