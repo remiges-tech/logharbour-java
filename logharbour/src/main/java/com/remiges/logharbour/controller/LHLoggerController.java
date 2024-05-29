@@ -24,6 +24,7 @@ import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.util.LHLogger;
+import com.remiges.logharbour.util.LogHarbour;
 
 @RestController
 public class LHLoggerController {
@@ -146,10 +147,10 @@ public class LHLoggerController {
 	@PostMapping("/activity-log")
 	public String postActivityLogs() throws JsonProcessingException {
 
-		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
+		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
 		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
 
-		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
 				loggerContext);
 
@@ -161,19 +162,19 @@ public class LHLoggerController {
 	@PostMapping("/changes-log")
 	public String postChangeLogs() throws JsonProcessingException {
 
-		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
+		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
 
 		ChangeInfo changeInfo = new ChangeInfo();
 		changeInfo.setEntity(loginUser.getName());
-		changeInfo.setOp("Updating a User Details");
+		changeInfo.setOp("Updating userId");
 
 		List<ChangeDetails> changeDetails = new ArrayList<>();
-		changeDetails.add(new ChangeDetails("Mobile", loginUser.getMobile(), "7977712312"));
+		changeDetails.add(new ChangeDetails("id", loginUser.getId(), "12"));
 		changeInfo.setChanges(changeDetails);
 
 		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
 
-		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
 				loggerContext);
 		logHarbour.logDataChange("Log Data change", changeInfo);
@@ -195,6 +196,36 @@ public class LHLoggerController {
 
 		logHarbour.logDebug("Log Activitiy Test", loginUser);
 		return "Debug Data log posted Successfully";
+	}
+
+	// working on cloning ----POC----
+	LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
+	LogHarbour l1 = new LogHarbour("Kra", "Linux", "Aadhar KYC module", LogPriority.INFO, "User1", "Insert",
+			LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, " ", "IP:127.0.2.1", loggerContext);
+
+	@PostMapping("/clone-log")
+	public String activityLogs() throws JsonProcessingException {
+
+		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
+
+		// logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module",
+		// LogPriority.INFO, "User1",
+		// "Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS,
+		// "", "IP:127.0.2.1",
+		// loggerContext);
+
+		LogHarbour clonedL1 = l1.clone();
+
+		System.out.println("Cloning Objects -----------------------------------------" + clonedL1);
+
+		clonedL1.setApp("Faiyaz");
+
+		System.out.println("Cloning Objects -----------------------------------------" + clonedL1);
+		System.out.println("Original Objects -----------------------------------------" + l1);
+
+		// logHarbour.logActivity("Log Activitiy Test", loginUser);
+		return "Activity Data log posted Successfully";
+
 	}
 
 }
