@@ -24,7 +24,7 @@ import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.util.LHLogger;
-import com.remiges.logharbour.util.LogHarbour;
+import com.remiges.logharbour.util.CloneableLog;
 
 @RestController
 public class LHLoggerController {
@@ -200,7 +200,7 @@ public class LHLoggerController {
 
 	// working on cloning ----POC----
 	LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
-	LogHarbour l1 = new LogHarbour("Kra", "Linux", "Aadhar KYC module", LogPriority.INFO, "User1", "Insert",
+	CloneableLog l1 = new CloneableLog("Kra", "Linux", "Aadhar KYC module", LogPriority.INFO, "User1", "Insert",
 			LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, " ", "IP:127.0.2.1", loggerContext);
 
 	@PostMapping("/clone-log")
@@ -214,7 +214,7 @@ public class LHLoggerController {
 		// "", "IP:127.0.2.1",
 		// loggerContext);
 
-		LogHarbour clonedL1 = l1.clone();
+		CloneableLog clonedL1 = l1.clone();
 
 		System.out.println("Cloning Objects -----------------------------------------" + clonedL1);
 

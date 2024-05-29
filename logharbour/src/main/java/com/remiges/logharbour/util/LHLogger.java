@@ -373,14 +373,15 @@ public class LHLogger {
 
     private static final int LOGHARBOUR_GETLOGS_MAXREC = 5;
 
-    public GetLogsResponse getLogs(String queryToken, String app, String who, String className, String instance,
-            String op, String fromtsStr, String totsStr, int ndays, String logType,
-            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
-            String searchAfterDocId) throws Exception {
+    public GetLogsResponse getLogs(String queryToken, String app, String who,
+                                   String className, String instance,
+                                   String op, String fromtsStr, String totsStr, int ndays, String logType,
+                                   String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
+                                   String searchAfterDocId) throws Exception {
 
         Instant fromts = null;
         Instant tots = null;
-        // String priValue = pri != null ? pri.toString() : null;
+
         // Parse the timestamps
         try {
             if (fromtsStr != null && !fromtsStr.isEmpty()) {
@@ -399,39 +400,30 @@ public class LHLogger {
             throw new IllegalArgumentException("fromts must be before tots");
         }
 
-        List<LogEntry> combinedLogs;
-        if (logType == null) {
-            combinedLogs = logEntryRepository.findChangeLogs(fromtsStr, totsStr, who, pri.toString(), remoteIP, op);
-            combinedLogs
-                    .addAll(logEntryRepository.findActivityLogs(fromtsStr, totsStr, who, pri.toString(), remoteIP, op));
-        } else {
-            switch (logType) {
-                case "A":
-                    combinedLogs = logEntryRepository.findActivityLogs(fromtsStr, totsStr, who, pri.toString(),
-                            remoteIP, op);
-                    break;
-                case "C":
-                    combinedLogs = logEntryRepository.findChangeLogs(fromtsStr, totsStr, who, pri.toString(), remoteIP,
-                            op);
-                    break;
-                default:
-                    combinedLogs = logEntryRepository.findChangeLogs(fromtsStr, totsStr, who, pri.toString(), remoteIP,
-                            op);
-                    combinedLogs.addAll(
-                            logEntryRepository.findActivityLogs(fromtsStr, totsStr, who, pri.toString(), remoteIP, op));
-                    break;
-            }
+
+        // Convert the priority to string
+        String priStr = pri != null ? pri.toString() : null;
+
+        // Fetch logs based on the constructed boolean query
+        List<LogEntry> filteredLogs = logEntryRepository.findLogsByQuery(logType, fromtsStr, totsStr, who, priStr, remoteIP, op);
+
+        int totalLogs = filteredLogs.size();
+
+        // Apply pagination using searchAfterTS and searchAfterDocID
+        if (searchAfterTs != null && !searchAfterTs.isEmpty() && searchAfterDocId != null && !searchAfterDocId.isEmpty()) {
+            Instant searchAfterInstant = Instant.parse(searchAfterTs);
+            filteredLogs = filteredLogs.stream()
+                    .filter(log -> {
+                        Instant logInstant = Instant.parse(log.getWhen());
+                        return logInstant.isAfter(searchAfterInstant) ||
+                                (logInstant.equals(searchAfterInstant) && log.getId().compareTo(searchAfterDocId) > 0);
+                    })
+                    .collect(Collectors.toList());
         }
 
-        // Apply additional filters...
-        // Skipping filters for brevity...
-
-        int totalLogs = combinedLogs.size();
-
-        // Apply pagination...
-
-        int end = Math.min(LOGHARBOUR_GETLOGS_MAXREC, combinedLogs.size());
-        List<LogEntry> paginatedLogs = combinedLogs.subList(0, end);
+        // Ensure we do not exceed the LOGHARBOUR_GETLOGS_MAXREC
+        int end = Math.min(LOGHARBOUR_GETLOGS_MAXREC, filteredLogs.size());
+        List<LogEntry> paginatedLogs = filteredLogs.subList(0, end);
 
         // Set next searchAfterTs and searchAfterDocId for the next batch
         String nextSearchAfterTs = null;
@@ -440,12 +432,14 @@ public class LHLogger {
         if (!paginatedLogs.isEmpty() && paginatedLogs.size() == end) {
             LogEntry lastLog = paginatedLogs.get(paginatedLogs.size() - 1);
             nextSearchAfterTs = lastLog.getWhen();
-            nextSearchAfterDocId = lastLog.getId().toString();
+            nextSearchAfterDocId = lastLog.getId();
         }
 
         // Create and return the response
         return new GetLogsResponse(paginatedLogs, totalLogs, end, null, nextSearchAfterTs, nextSearchAfterDocId);
     }
+
+
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
 
@@ -580,4 +574,4 @@ public class LHLogger {
     // ALLOWED_ATTRIBUTES.put("field", true);
     // }
 
-}
+    }

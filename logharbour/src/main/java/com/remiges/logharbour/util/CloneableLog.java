@@ -8,11 +8,11 @@ import lombok.Data;
 import com.remiges.logharbour.model.LoggerContext;
 
 @Data
-public class LogHarbour implements Cloneable {
+public class CloneableLog implements Cloneable {
 
     private Params params;
 
-    public LogHarbour(String app, String system, String module, LogPriority pri, String who, String op, String clazz,
+    public CloneableLog(String app, String system, String module, LogPriority pri, String who, String op, String clazz,
             String instanceId, Status status, String error, String remoteIP, LoggerContext loggerContext) {
         this.params = new Params(app, system, module, pri, who, op, clazz, instanceId, status, error, remoteIP,
                 loggerContext);
@@ -20,9 +20,9 @@ public class LogHarbour implements Cloneable {
 
     // Override the clone method
     @Override
-    public LogHarbour clone() {
+    public CloneableLog clone() {
         try {
-            LogHarbour cloned = (LogHarbour) super.clone();
+            CloneableLog cloned = (CloneableLog) super.clone();
             cloned.params = this.params; // Share the same Params object
             return cloned;
         } catch (CloneNotSupportedException e) {
