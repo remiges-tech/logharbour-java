@@ -2,11 +2,9 @@ package com.remiges.logharbour.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.remiges.logharbour.config.Constants;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.repository.LogEntryRepository;
 
@@ -14,21 +12,10 @@ import com.remiges.logharbour.repository.LogEntryRepository;
 public class KafkaService {
 
     @Autowired
-    private Constants constants;
-
-    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
     private LogEntryRepository logEntryRepository;
-
-    @Autowired
-    private KafkaTemplate<String, String> kafkaTemplate;
-
-    public void producerLog(String msg) {
-        System.out.println(" Sending data to Kafka Topic : " + msg);
-        kafkaTemplate.send(constants.getKafkaTopic(), msg);
-    }
 
     /**
      * Consumes messages from the specified Kafka topic, deserializes them into

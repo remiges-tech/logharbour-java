@@ -1,7 +1,5 @@
 package com.remiges.logharbour.util;
 
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
@@ -10,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,13 +17,13 @@ import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.Query;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
-import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.DebugInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
@@ -35,18 +32,20 @@ import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
+import com.remiges.logharbour.model.LogHarbourContext;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
-import com.remiges.logharbour.service.KafkaService;
 
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Service
 @AllArgsConstructor
+@NoArgsConstructor
 public class LHLogger {
 
     private String app;
@@ -70,18 +69,24 @@ public class LHLogger {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private KafkaService kafkaService;
-
-    @Autowired
     private LogEntryRepository logEntryRepository;
+
+    private KafkaTemplate<String, String> kafkaTemplate;
+    private PrintWriter printWriter;
+    private LogHarbourContext logHarbourContext;
+    private String topic;
 
     /**
      * Default constructor that initializes the writer for the log file.
      */
-    public LHLogger() {
+    public LHLogger(KafkaTemplate<String, String> kafkaTemplate, PrintWriter printWriter,
+            LogHarbourContext logHarbourContext, String topic) {
         try {
-            this.writer = new PrintWriter(new FileWriter(logFileName, true));
-        } catch (IOException e) {
+            this.printWriter = printWriter;
+            this.logHarbourContext = logHarbourContext;
+            this.kafkaTemplate = kafkaTemplate;
+            this.topic = topic;
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -132,13 +137,15 @@ public class LHLogger {
      */
     private void log(String logMessage) {
         try {
-            kafkaService.producerLog(logMessage);
+
+            kafkaTemplate.send(topic, logMessage);
+
         } catch (Exception e) {
-            writer.println(logMessage);
-            writer.flush();
+            // printWriter.println(logMessage);
+            // printWriter.flush();
+            // printWriter.close();
             e.printStackTrace();
         }
-
     }
 
     /**
@@ -267,13 +274,6 @@ public class LHLogger {
     }
 
     /**
-     * Closes the writer.
-     */
-    public void close() {
-        writer.close();
-    }
-
-    /**
      * Retrieves the list of log entries based on specified parameters.
      *
      * @param querytoken The query token.
@@ -374,10 +374,10 @@ public class LHLogger {
     private static final int LOGHARBOUR_GETLOGS_MAXREC = 5;
 
     public GetLogsResponse getLogs(String queryToken, String app, String who,
-                                   String className, String instance,
-                                   String op, String fromtsStr, String totsStr, int ndays, String logType,
-                                   String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
-                                   String searchAfterDocId) throws Exception {
+            String className, String instance,
+            String op, String fromtsStr, String totsStr, int ndays, String logType,
+            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
+            String searchAfterDocId) throws Exception {
 
         Instant fromts = null;
         Instant tots = null;
@@ -400,17 +400,18 @@ public class LHLogger {
             throw new IllegalArgumentException("fromts must be before tots");
         }
 
-
         // Convert the priority to string
         String priStr = pri != null ? pri.toString() : null;
 
         // Fetch logs based on the constructed boolean query
-        List<LogEntry> filteredLogs = logEntryRepository.findLogsByQuery(logType, fromtsStr, totsStr, who, priStr, remoteIP, op);
+        List<LogEntry> filteredLogs = logEntryRepository.findLogsByQuery(logType, fromtsStr, totsStr, who, priStr,
+                remoteIP, op);
 
         int totalLogs = filteredLogs.size();
 
         // Apply pagination using searchAfterTS and searchAfterDocID
-        if (searchAfterTs != null && !searchAfterTs.isEmpty() && searchAfterDocId != null && !searchAfterDocId.isEmpty()) {
+        if (searchAfterTs != null && !searchAfterTs.isEmpty() && searchAfterDocId != null
+                && !searchAfterDocId.isEmpty()) {
             Instant searchAfterInstant = Instant.parse(searchAfterTs);
             filteredLogs = filteredLogs.stream()
                     .filter(log -> {
@@ -438,8 +439,6 @@ public class LHLogger {
         // Create and return the response
         return new GetLogsResponse(paginatedLogs, totalLogs, end, null, nextSearchAfterTs, nextSearchAfterDocId);
     }
-
-
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
 
@@ -574,4 +573,4 @@ public class LHLogger {
     // ALLOWED_ATTRIBUTES.put("field", true);
     // }
 
-    }
+}
