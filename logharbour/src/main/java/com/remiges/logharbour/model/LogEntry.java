@@ -34,28 +34,6 @@ public class LogEntry {
     private String msg;
     private Object data; // change data , activity data , Debug data
 
-    // public LogEntry(String app, String system, String module, LogPriority pri, String who, String op, String when,
-    //         String className, String instanceId, Status status, String error, String remoteIP, String msg,
-    //         LogType logType,
-    //         Object data) {
-    //     this.id = UUID.randomUUID().toString();
-    //     this.app = app;
-    //     this.system = system;
-    //     this.module = module;
-    //     this.pri = pri;
-    //     this.who = who;
-    //     this.op = op;
-    //     this.when = Instant.now().toString();
-    //     this.className = className;
-    //     this.instanceId = instanceId;
-    //     this.status = status;
-    //     this.error = error;
-    //     this.remoteIP = remoteIP;
-    //     this.msg = msg;
-    //     this.logType = logType;
-    //     this.data = data;
-    // }
-
     public LogEntry(String app, String system, String module, LogPriority pri, String who, String op, Instant now,
             String clazz, String instanceId, Status status, String error, String remoteIP, String message,
             LogData data) {
