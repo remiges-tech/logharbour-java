@@ -3,6 +3,7 @@ package com.remiges.logharbour.controller;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,10 +23,12 @@ import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
+import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
 import com.remiges.logharbour.model.LogPriorityLevels;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
+import com.remiges.logharbour.model.LoginDetails;
 import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.util.LHLogger;
 
@@ -241,4 +244,22 @@ public class LHLoggerController {
 
 	}
 
+	/**
+	 * POC of Endpoint to test logging functionality. Creates a log entry with
+	 * predefined details and logs it using the LHLogger.
+	 *
+	 * @return A string message indicating the result of the logging operation.
+	 * @throws JsonProcessingException If there is an error processing JSON.
+	 */
+	@GetMapping("/check")
+	public String postLog() throws JsonProcessingException {
+		LoginDetails loginDetails = new LoginDetails();
+		loginDetails.setId("20");
+		loginDetails.setName("Deepak Kumar");
+
+		LogEntry logEntry = new LogEntry();
+
+		logHarbour.logActivity("suraj", logEntry);
+		return "able to log file";
+	}
 }

@@ -146,21 +146,36 @@ public class LHLogger implements Cloneable {
      * @param logMessage The log message to be logged.
      */
     private void log(String logMessage) {
-        try {
+        if (shouldLog(pri)){
+            try {
 
-            kafkaTemplate.send(topic, logMessage);
+                kafkaTemplate.send(topic, logMessage);
 
-        } catch (Exception e) {
-            writer.println(logMessage);
-            writer.flush();
-            writer.close();
-            e.printStackTrace();
+            } catch (Exception e) {
+                writer.println(logMessage);
+                writer.flush();
+                writer.close();
+                e.printStackTrace();
+            }
+        }
+    }
+
+     /**
+     * Checks if a message with the given priority should be logged based on the
+     * minimum log priority set in the logger context.
+     *
+     * @param priority The priority of the log message.
+     * @return True if the message should be logged, false otherwise.
+     */
+    public boolean shouldLog(LogPriority priority) {
+        synchronized (loggerContext) {
+            return priority.ordinal() <= loggerContext.getMinLogPriority().ordinal();
         }
     }
 
     /**
      * Logs an activity event with data.
-     *
+     * 
      * @param message The log message.
      * @param data    The data associated with the activity.
      * @throws JsonProcessingException if an error occurs while processing the log
