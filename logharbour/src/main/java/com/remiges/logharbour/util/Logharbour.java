@@ -5,8 +5,8 @@ import java.io.PrintWriter;
 
 import org.springframework.kafka.core.KafkaTemplate;
 
-import com.remiges.logharbour.model.LogHarbourContext;
 import com.remiges.logharbour.model.LogPriorityLevels;
+import com.remiges.logharbour.model.LoggerContext;
 
 /**
  * Interface for Logharbour, providing methods to interact with Kafka,
@@ -38,6 +38,6 @@ public interface Logharbour {
      * @param minLogPriority The minimum priority level for logging.
      * @return LogHarbourContext configured with the specified minimum log priority.
      */
-    public LogHarbourContext getLogharbourContext(LogPriorityLevels minLogPriority);
+    public LoggerContext getLoggerContext(LogPriorityLevels minLogPriority);
 
 }

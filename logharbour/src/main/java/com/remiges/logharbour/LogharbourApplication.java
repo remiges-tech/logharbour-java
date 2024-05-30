@@ -6,11 +6,12 @@ import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDa
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 @EnableElasticsearchRepositories
-@SpringBootApplication(exclude = {ElasticsearchDataAutoConfiguration.class})
+@SpringBootApplication(exclude = { ElasticsearchDataAutoConfiguration.class })
 public class LogharbourApplication {
- 
+
 	public static void main(String[] args) {
 		SpringApplication.run(LogharbourApplication.class, args);
+
 	}
 
 }

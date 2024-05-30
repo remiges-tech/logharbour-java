@@ -8,11 +8,15 @@ import org.springframework.data.elasticsearch.annotations.Document;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
+@EqualsAndHashCode
 @Document(indexName = "logger")
 public class LogEntry {
 
@@ -76,4 +80,5 @@ public class LogEntry {
         FAILURE,
         SUCCESS
     }
+
 }

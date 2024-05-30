@@ -1,12 +1,15 @@
 package com.remiges.logharbour.controller;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,7 +27,6 @@ import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.util.LHLogger;
-import com.remiges.logharbour.util.CloneableLog;
 
 @RestController
 public class LHLoggerController {
@@ -199,32 +201,36 @@ public class LHLoggerController {
 	}
 
 	// working on cloning ----POC----
-	LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
-	CloneableLog l1 = new CloneableLog("Kra", "Linux", "Aadhar KYC module", LogPriority.INFO, "User1", "Insert",
-			LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, " ", "IP:127.0.2.1", loggerContext);
+
+	@Autowired
+	KafkaTemplate<String, String> kafkaTemplate;
 
 	@PostMapping("/clone-log")
-	public String activityLogs() throws JsonProcessingException {
+	public String activityLogs() throws JsonProcessingException, FileNotFoundException {
+		LoggerContext context = new LoggerContext(LogPriorityLevels.INFO);
+		context.setDebugMode(true);
+		PrintWriter printWriter = new PrintWriter("logharbour.txt");
+		LHLogger lhLogger = new LHLogger(kafkaTemplate, printWriter, context, "logharbour");
 
-		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
+		LHLogger l1 = lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
+				context);
 
-		// logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module",
-		// LogPriority.INFO, "User1",
-		// "Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS,
-		// "", "IP:127.0.2.1",
-		// loggerContext);
+		// lhLogger.logActivity("before change", lhLogger);
+		// lhLogger.clone().setApp("CRUX");
 
-		CloneableLog clonedL1 = l1.clone();
+		LHLogger l2 = l1.clone();
 
-		System.out.println("Cloning Objects -----------------------------------------" + clonedL1);
+		// lhLogger.clone().setApp(null);
+		System.out.println("-----------------" + l2);
 
-		clonedL1.setApp("Faiyaz");
+		l1.setApp("crux");
 
-		System.out.println("Cloning Objects -----------------------------------------" + clonedL1);
-		System.out.println("Original Objects -----------------------------------------" + l1);
+		System.out.println("-----------------" + l2);
+		System.out.println("--lhLogger---------------" + l1);
+		// lhLogger.logActivity("after change", lhLogger);
 
-		// logHarbour.logActivity("Log Activitiy Test", loginUser);
-		return "Activity Data log posted Successfully";
+		return null;
 
 	}
 

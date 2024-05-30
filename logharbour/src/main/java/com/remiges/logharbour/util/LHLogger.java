@@ -32,7 +32,6 @@ import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
-import com.remiges.logharbour.model.LogHarbourContext;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
@@ -41,12 +40,14 @@ import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Service
 @AllArgsConstructor
 @NoArgsConstructor
-public class LHLogger {
+@Data
+public class LHLogger implements Cloneable {
 
     private String app;
     private String system;
@@ -72,18 +73,26 @@ public class LHLogger {
     private LogEntryRepository logEntryRepository;
 
     private KafkaTemplate<String, String> kafkaTemplate;
-    private PrintWriter printWriter;
-    private LogHarbourContext logHarbourContext;
     private String topic;
+
+    // cloning method
+    @Override
+    public LHLogger clone() {
+        try {
+            return (LHLogger) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException("Cloning not supported for LogEntry", e);
+        }
+    }
 
     /**
      * Default constructor that initializes the writer for the log file.
      */
     public LHLogger(KafkaTemplate<String, String> kafkaTemplate, PrintWriter printWriter,
-            LogHarbourContext logHarbourContext, String topic) {
+            LoggerContext logHarbourContext, String topic) {
         try {
-            this.printWriter = printWriter;
-            this.logHarbourContext = logHarbourContext;
+            this.writer = printWriter;
+            this.loggerContext = logHarbourContext;
             this.kafkaTemplate = kafkaTemplate;
             this.topic = topic;
         } catch (Exception e) {
@@ -107,7 +116,7 @@ public class LHLogger {
      * @param remoteIP      Remote IP address.
      * @param loggerContext Logger context.
      */
-    public void setLogDetails(String app, String system, String module, LogPriority pri, String who, String op,
+    public LHLogger setLogDetails(String app, String system, String module, LogPriority pri, String who, String op,
             String clazz, String instanceId, Status status, String error, String remoteIP,
             LoggerContext loggerContext) {
         this.app = app;
@@ -122,6 +131,9 @@ public class LHLogger {
         this.error = error;
         this.remoteIP = remoteIP;
         this.loggerContext = loggerContext;
+
+        return this;
+
     }
 
     public LogEntry newLogEntry(String message, LogData data) {
@@ -141,9 +153,9 @@ public class LHLogger {
             kafkaTemplate.send(topic, logMessage);
 
         } catch (Exception e) {
-            // printWriter.println(logMessage);
-            // printWriter.flush();
-            // printWriter.close();
+            writer.println(logMessage);
+            writer.flush();
+            writer.close();
             e.printStackTrace();
         }
     }
