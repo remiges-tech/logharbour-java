@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
@@ -147,22 +148,25 @@ public class LHLoggerController {
 	}
 
 	@PostMapping("/activity-log")
-	public String postActivityLogs() throws JsonProcessingException {
+	public String postActivityLogs() throws Exception {
 
 		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
 		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
 
-		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
+		LHLogger lhLogger = new LHLogger(kafkaTemplate, new PrintWriter("logharbour.txt"), loggerContext, "logharbour",
+				new ObjectMapper());
+
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
 				loggerContext);
 
-		logHarbour.logActivity("Log Activitiy Test", loginUser);
+		lhLogger.logActivity("Log Activitiy Test", loginUser);
 		return "Activity Data log posted Successfully";
 
 	}
 
 	@PostMapping("/changes-log")
-	public String postChangeLogs() throws JsonProcessingException {
+	public String postChangeLogs() throws Exception {
 
 		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
 
@@ -175,11 +179,13 @@ public class LHLoggerController {
 		changeInfo.setChanges(changeDetails);
 
 		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
+		LHLogger lhLogger = new LHLogger(kafkaTemplate, new PrintWriter("logharbour.txt"), loggerContext, "logharbour",
+				new ObjectMapper());
 
-		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
 				loggerContext);
-		logHarbour.logDataChange("Log Data change", changeInfo);
+		lhLogger.logDataChange("Log Data change", changeInfo);
 
 		return "Change Data log posted Successfully";
 	}
@@ -207,10 +213,11 @@ public class LHLoggerController {
 
 	@PostMapping("/clone-log")
 	public String activityLogs() throws JsonProcessingException, FileNotFoundException {
+
 		LoggerContext context = new LoggerContext(LogPriorityLevels.INFO);
 		context.setDebugMode(true);
 		PrintWriter printWriter = new PrintWriter("logharbour.txt");
-		LHLogger lhLogger = new LHLogger(kafkaTemplate, printWriter, context, "logharbour");
+		LHLogger lhLogger = new LHLogger(kafkaTemplate, printWriter, context, "logharbour", new ObjectMapper());
 
 		LHLogger l1 = lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",

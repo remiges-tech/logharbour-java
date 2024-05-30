@@ -60,20 +60,17 @@ public class LHLogger implements Cloneable {
     private Status status;
     private String error;
     private String remoteIP;
-    private LoggerContext loggerContext;
-
-    private String logFileName = "logharbour.txt";
-    private PrintWriter writer;
-    private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private LogEntryRepository logEntryRepository;
 
     private KafkaTemplate<String, String> kafkaTemplate;
     private String topic;
+    private LoggerContext loggerContext;
+    private PrintWriter writer;
+    private ObjectMapper objectMapper;
+
+    private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
+
+    @Autowired
+    private LogEntryRepository logEntryRepository;
 
     // cloning method
     @Override
@@ -89,12 +86,13 @@ public class LHLogger implements Cloneable {
      * Default constructor that initializes the writer for the log file.
      */
     public LHLogger(KafkaTemplate<String, String> kafkaTemplate, PrintWriter printWriter,
-            LoggerContext logHarbourContext, String topic) {
+            LoggerContext logHarbourContext, String topic, ObjectMapper objectMapper) {
         try {
             this.writer = printWriter;
             this.loggerContext = logHarbourContext;
             this.kafkaTemplate = kafkaTemplate;
             this.topic = topic;
+            this.objectMapper = objectMapper;
         } catch (Exception e) {
             e.printStackTrace();
         }
