@@ -1,6 +1,5 @@
 package com.remiges.logharbour.service;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +20,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 @Service
 public class ElasticQueryServices {
 
-     @Autowired
+    @Autowired
     private ElasticsearchOperations elasticsearchOperations;
 
     public SearchHits<LogEntry> getQueryForLogs(String queryToken, String app, String who,
@@ -47,15 +46,42 @@ public class ElasticQueryServices {
         if (op != null && !op.isEmpty()) {
             boBuilder.must(MatchPhraseQuery.of(m -> m.field("op").query(op))._toQuery());
         }
-       
 
-      //  MatchQuery.of(m -> m.field("app").query(""))._toQuery();
+        // MatchQuery.of(m -> m.field("app").query(""))._toQuery();
 
         Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery()).build();
 
         SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
 
-        return searchHits ;
+        return searchHits;
+    }
+
+    public SearchHits<LogEntry> getQueryForChangeLogs(String queryToken, String app,
+            String className, String instance, String who,
+            String op, String fromtsStr, String totsStr, int ndays, String field, String logType,
+            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
+            String searchAfterDocId) {
+
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+
+        // Mandatory fields
+        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("app").query(app))._toQuery());
+        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("className").query(className))._toQuery());
+        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("instanceId").query(instance))._toQuery());
+
+        // Optional fields
+        if (who != null && !who.isEmpty()) {
+            boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("who").query(who))._toQuery());
+        }
+        if (op != null && !op.isEmpty()) {
+            boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("op").query(op))._toQuery());
+        }
+
+        Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery()).build();
+
+        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
+
+        return searchHits;
     }
 
 }

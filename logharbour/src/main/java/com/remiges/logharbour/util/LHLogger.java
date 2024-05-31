@@ -72,6 +72,9 @@ public class LHLogger implements Cloneable {
     private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
 
     @Autowired
+    private ElasticQueryServices elasticQueryServices;
+
+    @Autowired
     private LogEntryRepository logEntryRepository;
 
     // cloning method
@@ -369,6 +372,22 @@ public class LHLogger implements Cloneable {
         return logs;
     }
 
+    public List<LogEntry> getChangesLog(String queryToken, String app,
+            String className, String instance, String who,
+            String op, String fromtsStr, String totsStr, int ndays, String field, String logType,
+            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
+            String searchAfterDocId) throws Exception {
+
+        Instant fromts = null;
+        Instant tots = null;
+
+        SearchHits<LogEntry> search = elasticQueryServices.getQueryForChangeLogs(queryToken, app, className, instance,
+                who,
+                op, fromtsStr, totsStr, ndays, field, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
+
+        return search.getSearchHits().stream().map(SearchHit::getContent).toList();
+    }
+
     /**
      * Fetches log entries based on various parameters and provides pagination
      * support.
@@ -403,9 +422,6 @@ public class LHLogger implements Cloneable {
      */
 
     private static final int LOGHARBOUR_GETLOGS_MAXREC = 5;
-
-    @Autowired
-    private ElasticQueryServices elasticQueryServices;
 
     public List<LogEntry> getLogs(String queryToken, String app, String who,
             String className, String instance,

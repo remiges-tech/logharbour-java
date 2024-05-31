@@ -214,33 +214,29 @@ public class LHLoggerController {
 		return "Debug Data log posted Successfully";
 	}
 
-	@PostMapping("/clone-log")
-	public String activityLogs() throws Exception {
+	@GetMapping("/change-logs")
+	public List<LogEntry> getChangeLogs(
+			@RequestParam(required = true) String queryToken,
+			@RequestParam(required = true) String app,
+			@RequestParam(required = true) String className,
+			@RequestParam(required = true) String instance,
+			@RequestParam(required = false) String who,
+			@RequestParam(required = false) String op,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
+			@RequestParam(required = false, defaultValue = "0") int ndays,
+			@RequestParam(required = false) String field,
+			@RequestParam(required = false) String logType,
+			@RequestParam(required = false) String remoteIP,
+			@RequestParam(required = false) LogEntry.LogPriority pri,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String searchAfterTS,
+			@RequestParam(required = false) String searchAfterDocID) throws Exception {
 
-		LoggerContext context = new LoggerContext(LogPriority.INFO);
-		context.setDebugMode(true);
-		PrintWriter printWriter = new PrintWriter("logharbour.txt");
-		LHLogger lhLogger = new LHLogger(kafkaTemplate, printWriter, context, "logharbour", new ObjectMapper());
-
-		LHLogger l1 = lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1");
-
-		// lhLogger.logActivity("before change", lhLogger);
-		// lhLogger.clone().setApp("CRUX");
-
-		LHLogger l2 = l1.clone();
-
-		// lhLogger.clone().setApp(null);
-		System.out.println("-----------------" + l2);
-
-		l1.setApp("crux");
-
-		System.out.println("-----------------" + l2);
-		System.out.println("--lhLogger---------------" + l1);
-		// lhLogger.logActivity("after change", lhLogger);
-
-		return null;
-
+		// Call the service method to get the changes and return the response
+		return logHarbour.getChangesLog(queryToken, app, className, instance, who, op, fromts, tots, ndays, field,
+				logType,
+				remoteIP,
+				pri, searchAfterTS, searchAfterDocID);
 	}
 
 }
