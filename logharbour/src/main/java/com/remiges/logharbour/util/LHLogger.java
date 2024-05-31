@@ -167,7 +167,7 @@ public class LHLogger implements Cloneable {
      */
     public boolean shouldLog(LogPriority priority) {
         synchronized (loggerContext) {
-            return priority.ordinal() <= loggerContext.getMinLogPriority().ordinal();
+            return priority.ordinal() >= loggerContext.getMinLogPriority().ordinal();
         }
     }
 
@@ -193,8 +193,10 @@ public class LHLogger implements Cloneable {
         } else {
             entry = newLogEntry(message, null);
         }
-        entry.setLogType(LogType.ACTIVITY);
-        log(objectMapper.writeValueAsString(entry));
+        if (shouldLog(entry.getPri())) {
+            entry.setLogType(LogType.ACTIVITY);
+            log(objectMapper.writeValueAsString(entry));
+        }
     }
 
     /**
@@ -218,8 +220,9 @@ public class LHLogger implements Cloneable {
 
         LogEntry entry = newLogEntry(message, logData);
         entry.setLogType(LogEntry.LogType.CHANGE);
-
-        log(objectMapper.writeValueAsString(entry));
+        if (shouldLog(entry.getPri())) {
+            log(objectMapper.writeValueAsString(entry));
+        }
 
     }
 
@@ -260,7 +263,9 @@ public class LHLogger implements Cloneable {
             logData.setDebugData(debugInfo);
             entry = newLogEntry(message, logData);
             entry.setLogType(LogEntry.LogType.DEBUG);
-            log(objectMapper.writeValueAsString(entry));
+            if (shouldLog(entry.getPri())) {
+                log(objectMapper.writeValueAsString(entry));
+            }
         }
     }
 

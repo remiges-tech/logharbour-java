@@ -164,7 +164,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG1, "User1",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "127.1.2.1");
 
 		lhLogger.logActivity("Log Activitiy Test", loginUser);
@@ -192,7 +192,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User2",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG0, "User2",
 				"Changing", LHLoggerController.class.getName().toString(), "Instance Id", Status.SUCCESS, "",
 				"127.6.2.1");
 
@@ -211,7 +211,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG2, "Kra User",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
 
 		lhLogger.logDebug("Log Activitiy Test", loginUser);
