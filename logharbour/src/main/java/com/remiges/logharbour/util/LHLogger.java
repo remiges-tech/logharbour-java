@@ -36,6 +36,7 @@ import com.remiges.logharbour.model.LogEntry.Status;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.repository.LogEntryRepository;
+import com.remiges.logharbour.service.ElasticQueryServices;
 
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
@@ -403,7 +404,10 @@ public class LHLogger implements Cloneable {
 
     private static final int LOGHARBOUR_GETLOGS_MAXREC = 5;
 
-    public GetLogsResponse getLogs(String queryToken, String app, String who,
+    @Autowired
+    private ElasticQueryServices elasticQueryServices;
+
+    public List<LogEntry> getLogs(String queryToken, String app, String who,
             String className, String instance,
             String op, String fromtsStr, String totsStr, int ndays, String logType,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
@@ -412,62 +416,73 @@ public class LHLogger implements Cloneable {
         Instant fromts = null;
         Instant tots = null;
 
+        SearchHits<LogEntry> search = elasticQueryServices.getQueryForLogs(queryToken, app, who, className, instance,
+                op, fromtsStr, totsStr, ndays, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
+
+        return search.getSearchHits().stream().map(SearchHit::getContent).toList();
+
         // Parse the timestamps
-        try {
-            if (fromtsStr != null && !fromtsStr.isEmpty()) {
-                fromts = Instant.parse(fromtsStr);
-            }
-            if (totsStr != null && !totsStr.isEmpty()) {
-                tots = Instant.parse(totsStr);
-            }
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(
-                    "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
-        }
-
-        // Validate timestamp range
-        if (fromts != null && tots != null && fromts.isAfter(tots)) {
-            throw new IllegalArgumentException("fromts must be before tots");
-        }
-
-        // Convert the priority to string
-        String priStr = pri != null ? pri.toString() : null;
-
-        // Fetch logs based on the constructed boolean query
-        List<LogEntry> filteredLogs = logEntryRepository.findLogsByQuery(logType, fromtsStr, totsStr, who, priStr,
-                remoteIP, op);
-
-        int totalLogs = filteredLogs.size();
-
-        // Apply pagination using searchAfterTS and searchAfterDocID
-        if (searchAfterTs != null && !searchAfterTs.isEmpty() && searchAfterDocId != null
-                && !searchAfterDocId.isEmpty()) {
-            Instant searchAfterInstant = Instant.parse(searchAfterTs);
-            filteredLogs = filteredLogs.stream()
-                    .filter(log -> {
-                        Instant logInstant = Instant.parse(log.getWhen());
-                        return logInstant.isAfter(searchAfterInstant) ||
-                                (logInstant.equals(searchAfterInstant) && log.getId().compareTo(searchAfterDocId) > 0);
-                    })
-                    .collect(Collectors.toList());
-        }
-
-        // Ensure we do not exceed the LOGHARBOUR_GETLOGS_MAXREC
-        int end = Math.min(LOGHARBOUR_GETLOGS_MAXREC, filteredLogs.size());
-        List<LogEntry> paginatedLogs = filteredLogs.subList(0, end);
-
-        // Set next searchAfterTs and searchAfterDocId for the next batch
-        String nextSearchAfterTs = null;
-        String nextSearchAfterDocId = null;
-
-        if (!paginatedLogs.isEmpty() && paginatedLogs.size() == end) {
-            LogEntry lastLog = paginatedLogs.get(paginatedLogs.size() - 1);
-            nextSearchAfterTs = lastLog.getWhen();
-            nextSearchAfterDocId = lastLog.getId();
-        }
-
-        // Create and return the response
-        return new GetLogsResponse(paginatedLogs, totalLogs, end, null, nextSearchAfterTs, nextSearchAfterDocId);
+        /*
+         * try {
+         * if (fromtsStr != null && !fromtsStr.isEmpty()) {
+         * fromts = Instant.parse(fromtsStr);
+         * }
+         * if (totsStr != null && !totsStr.isEmpty()) {
+         * tots = Instant.parse(totsStr);
+         * }
+         * } catch (DateTimeParseException e) {
+         * throw new IllegalArgumentException(
+         * "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
+         * }
+         * 
+         * // Validate timestamp range
+         * if (fromts != null && tots != null && fromts.isAfter(tots)) {
+         * throw new IllegalArgumentException("fromts must be before tots");
+         * }
+         * 
+         * // Convert the priority to string
+         * String priStr = pri != null ? pri.toString() : null;
+         * 
+         * // Fetch logs based on the constructed boolean query
+         * List<LogEntry> filteredLogs = logEntryRepository.findLogsByQuery(logType,
+         * fromtsStr, totsStr, who, priStr,
+         * remoteIP, op);
+         * 
+         * int totalLogs = filteredLogs.size();
+         * 
+         * // Apply pagination using searchAfterTS and searchAfterDocID
+         * if (searchAfterTs != null && !searchAfterTs.isEmpty() && searchAfterDocId !=
+         * null
+         * && !searchAfterDocId.isEmpty()) {
+         * Instant searchAfterInstant = Instant.parse(searchAfterTs);
+         * filteredLogs = filteredLogs.stream()
+         * .filter(log -> {
+         * Instant logInstant = Instant.parse(log.getWhen());
+         * return logInstant.isAfter(searchAfterInstant) ||
+         * (logInstant.equals(searchAfterInstant) &&
+         * log.getId().compareTo(searchAfterDocId) > 0);
+         * })
+         * .collect(Collectors.toList());
+         * }
+         * 
+         * // Ensure we do not exceed the LOGHARBOUR_GETLOGS_MAXREC
+         * int end = Math.min(LOGHARBOUR_GETLOGS_MAXREC, filteredLogs.size());
+         * List<LogEntry> paginatedLogs = filteredLogs.subList(0, end);
+         * 
+         * // Set next searchAfterTs and searchAfterDocId for the next batch
+         * String nextSearchAfterTs = null;
+         * String nextSearchAfterDocId = null;
+         * 
+         * if (!paginatedLogs.isEmpty() && paginatedLogs.size() == end) {
+         * LogEntry lastLog = paginatedLogs.get(paginatedLogs.size() - 1);
+         * nextSearchAfterTs = lastLog.getWhen();
+         * nextSearchAfterDocId = lastLog.getId();
+         * }
+         * 
+         * // Create and return the response
+         * return new GetLogsResponse(paginatedLogs, totalLogs, end, null,
+         * nextSearchAfterTs, nextSearchAfterDocId);
+         */
     }
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {

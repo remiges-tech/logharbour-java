@@ -4,35 +4,58 @@ package com.remiges.logharbour.service;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.management.Query;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.BaseQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import com.remiges.logharbour.model.LogEntry;
+
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 
 @Service
 public class ElasticQueryServices {
 
-    @Autowired
+     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
 
-    public BaseQueryBuilder getQueryForLogs() {
+    public SearchHits<LogEntry> getQueryForLogs(String queryToken, String app, String who,
+            String className, String instance,
+            String op, String fromtsStr, String totsStr, int ndays, String logType,
+            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
+            String searchAfterDocId) {
 
         BoolQuery.Builder boBuilder = new BoolQuery.Builder();
-        List<Query> queries = new ArrayList<>();
 
-       // MatchQueryBuilder appMatchQuery = QueryBuilders.matchQuery("app", appValue);
+        if (app != null && !app.isEmpty()) {
+            boBuilder.must(MatchPhraseQuery.of(m -> m.field("app").query(app))._toQuery());
+        }
+        if (who != null && !who.isEmpty()) {
+            boBuilder.must(MatchPhraseQuery.of(m -> m.field("who").query(who))._toQuery());
+        }
+        if (className != null && !className.isEmpty()) {
+            boBuilder.must(MatchPhraseQuery.of(m -> m.field("className").query(className))._toQuery());
+        }
+        if (instance != null && !instance.isEmpty()) {
+            boBuilder.must(MatchPhraseQuery.of(m -> m.field("instanceId").query(instance))._toQuery());
+        }
+        if (op != null && !op.isEmpty()) {
+            boBuilder.must(MatchPhraseQuery.of(m -> m.field("op").query(op))._toQuery());
+        }
+       
 
-        MatchQuery.of(m -> m.field("app").query(""))._toQuery();
-        MatchQuery.of(m -> m.field("app").query(""))._toQuery();
-       // queries.add(MatchQuery.of(m -> m.field("app").query(""))._toQuery());
+      //  MatchQuery.of(m -> m.field("app").query(""))._toQuery();
 
-     // boBuilder.must(null);
-        return null;
+        Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery()).build();
+
+        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
+
+        return searchHits ;
     }
 
 }

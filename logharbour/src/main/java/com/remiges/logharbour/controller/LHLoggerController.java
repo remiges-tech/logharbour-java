@@ -57,7 +57,7 @@ public class LHLoggerController {
 	}
 
 	@GetMapping("/data-logs")
-	public GetLogsResponse getLogs(
+	public List<LogEntry> getLogs(
 			@RequestParam(required = true) String queryToken,
 			@RequestParam(required = false) String app,
 			@RequestParam(required = false) String who,
