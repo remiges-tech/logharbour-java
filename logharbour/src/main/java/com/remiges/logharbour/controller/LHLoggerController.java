@@ -1,9 +1,7 @@
 package com.remiges.logharbour.controller;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,20 +21,24 @@ import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
-import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
 import com.remiges.logharbour.model.LogPriorityLevels;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.model.LoginDetails;
 import com.remiges.logharbour.model.LoginUser;
+import com.remiges.logharbour.service.LHLoggerTestService;
 import com.remiges.logharbour.util.LHLogger;
+import com.remiges.logharbour.util.Logharbour;
 
 @RestController
 public class LHLoggerController {
 
 	@Autowired
 	private LHLogger logHarbour;
+
+	@Autowired
+	private KafkaTemplate<String, String> kafkaTemplate;
 
 	// get change controller
 	@GetMapping("/data-changes")
@@ -154,16 +156,18 @@ public class LHLoggerController {
 	public String postActivityLogs() throws Exception {
 
 		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
-		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
 
-		LHLogger lhLogger = new LHLogger(kafkaTemplate, new PrintWriter("logharbour.txt"), loggerContext, "logharbour",
+		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
+
+		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
+				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
 		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
-				loggerContext);
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "127.1.2.1");
 
 		lhLogger.logActivity("Log Activitiy Test", loginUser);
+
 		return "Activity Data log posted Successfully";
 
 	}
@@ -181,41 +185,40 @@ public class LHLoggerController {
 		changeDetails.add(new ChangeDetails("id", loginUser.getId(), "12"));
 		changeInfo.setChanges(changeDetails);
 
-		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
-		LHLogger lhLogger = new LHLogger(kafkaTemplate, new PrintWriter("logharbour.txt"), loggerContext, "logharbour",
+		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
+
+		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
+				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User1",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
-				loggerContext);
-		lhLogger.logDataChange("Log Data change", changeInfo);
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User2",
+				"Changing", LHLoggerController.class.getName().toString(), "Instance Id", Status.SUCCESS, "",
+				"127.6.2.1");
 
+		lhLogger.logDataChange("Log Data change", changeInfo);
 		return "Change Data log posted Successfully";
 	}
 
 	@PostMapping("/debug-log")
-	public String postDebugLogs() throws JsonProcessingException {
-
-		LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
-		loggerContext.setDebugMode(true);
+	public String postDebugLogs() throws Exception {
 
 		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
 
-		logHarbour.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
-				loggerContext);
+		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
+
+		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
+				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
+				new ObjectMapper());
+
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
 
 		logHarbour.logDebug("Log Activitiy Test", loginUser);
 		return "Debug Data log posted Successfully";
 	}
 
-	// working on cloning ----POC----
-
-	@Autowired
-	KafkaTemplate<String, String> kafkaTemplate;
-
 	@PostMapping("/clone-log")
-	public String activityLogs() throws JsonProcessingException, FileNotFoundException {
+	public String activityLogs() throws Exception {
 
 		LoggerContext context = new LoggerContext(LogPriorityLevels.INFO);
 		context.setDebugMode(true);
@@ -223,8 +226,7 @@ public class LHLoggerController {
 		LHLogger lhLogger = new LHLogger(kafkaTemplate, printWriter, context, "logharbour", new ObjectMapper());
 
 		LHLogger l1 = lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1",
-				context);
+				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "IP:127.0.2.1");
 
 		// lhLogger.logActivity("before change", lhLogger);
 		// lhLogger.clone().setApp("CRUX");

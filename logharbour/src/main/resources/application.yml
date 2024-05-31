@@ -17,7 +17,7 @@ kafka:
 
 elasticsearch:
   username: elastic
-  password: jWddl*kneXQ_wEGVextg
+  password: hm_UjCQlxvVP=iPx94pA
 
   host: localhost
   port: 9200

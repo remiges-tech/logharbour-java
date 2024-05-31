@@ -115,8 +115,7 @@ public class LHLogger implements Cloneable {
      * @param loggerContext Logger context.
      */
     public LHLogger setLogDetails(String app, String system, String module, LogPriority pri, String who, String op,
-            String clazz, String instanceId, Status status, String error, String remoteIP,
-            LoggerContext loggerContext) {
+            String clazz, String instanceId, Status status, String error, String remoteIP) {
         this.app = app;
         this.system = system;
         this.module = module;
@@ -128,7 +127,6 @@ public class LHLogger implements Cloneable {
         this.status = status;
         this.error = error;
         this.remoteIP = remoteIP;
-        this.loggerContext = loggerContext;
 
         return this;
 
@@ -149,7 +147,7 @@ public class LHLogger implements Cloneable {
         if (shouldLog(pri)){
             try {
 
-                kafkaTemplate.send(topic, logMessage);
+                this.kafkaTemplate.send(topic, logMessage);
 
             } catch (Exception e) {
                 writer.println(logMessage);

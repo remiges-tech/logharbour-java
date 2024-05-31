@@ -4,17 +4,22 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
 
 import com.remiges.logharbour.model.LogPriorityLevels;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.util.Logharbour;
 
+@Service
 public class LHLoggerTestService implements Logharbour {
 
-    @Autowired
-    KafkaTemplate<String, String> kafkaTemplate;
+   
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    public LHLoggerTestService(KafkaTemplate<String, String> kafkaTemplate){
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Override
     public KafkaTemplate<String, String> getKafkaConnection() {
