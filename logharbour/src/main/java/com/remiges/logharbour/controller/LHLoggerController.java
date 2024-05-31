@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.remiges.logharbour.exception.LogException;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
@@ -213,7 +214,7 @@ public class LHLoggerController {
 		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "Kra User",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
 
-		logHarbour.logDebug("Log Activitiy Test", loginUser);
+		lhLogger.logDebug("Log Activitiy Test", loginUser);
 		return "Debug Data log posted Successfully";
 	}
 
@@ -252,9 +253,10 @@ public class LHLoggerController {
 	 *
 	 * @return A string message indicating the result of the logging operation.
 	 * @throws JsonProcessingException If there is an error processing JSON.
+	 * @throws LogException
 	 */
 	@GetMapping("/check")
-	public String postLog() throws JsonProcessingException {
+	public String postLog() throws JsonProcessingException, LogException {
 		LoginDetails loginDetails = new LoginDetails();
 		loginDetails.setId("20");
 		loginDetails.setName("Deepak Kumar");

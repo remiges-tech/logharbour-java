@@ -2,6 +2,8 @@ package com.remiges.logharbour.model;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import lombok.Data;
+
 /**
  * LoggerContext provides a shared context (state) for instances of Logger.
  * It contains a minLogPriority field that determines the minimum log priority
@@ -9,12 +11,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * The debugMode AtomicBoolean ensures thread-safe operations on the debug mode
  * flag.
  */
+
+@Data
 public class LoggerContext {
     private LogPriorityLevels minLogPriority;
     private final AtomicBoolean debugMode;
 
     /**
      * Constructs a new LoggerContext with the specified minimum log priority.
+     * 
      * @param minLogPriority the minimum log priority level for this context
      */
     public LoggerContext(LogPriorityLevels minLogPriority) {
@@ -30,8 +35,9 @@ public class LoggerContext {
         this.minLogPriority = minLogPriority;
     }
 
-     /**
+    /**
      * Checks if debug mode is enabled.
+     * 
      * @return true if debug mode is enabled, false otherwise
      */
     public boolean isDebugMode() {

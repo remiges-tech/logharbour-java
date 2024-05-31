@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
+import com.remiges.logharbour.exception.LogException;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.DebugInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
@@ -143,22 +144,21 @@ public class LHLogger implements Cloneable {
      *
      * @param logMessage The log message to be logged.
      */
-    private void log(String logMessage) {
-        if (shouldLog(pri)){
+    private void log(String logMessage) throws LogException {
+        if (shouldLog(pri)) {
             try {
-
                 this.kafkaTemplate.send(topic, logMessage);
-
             } catch (Exception e) {
                 writer.println(logMessage);
                 writer.flush();
                 writer.close();
                 e.printStackTrace();
+                throw new LogException("Failed to send log message to Kafka", e);
             }
         }
     }
 
-     /**
+    /**
      * Checks if a message with the given priority should be logged based on the
      * minimum log priority set in the logger context.
      *
@@ -178,8 +178,9 @@ public class LHLogger implements Cloneable {
      * @param data    The data associated with the activity.
      * @throws JsonProcessingException if an error occurs while processing the log
      *                                 entry.
+     * @throws LogException
      */
-    public void logActivity(String message, Object data) throws JsonProcessingException {
+    public void logActivity(String message, Object data) throws JsonProcessingException, LogException {
 
         LogData logData = null;
         LogEntry entry;
@@ -203,8 +204,9 @@ public class LHLogger implements Cloneable {
      * @param data    The change information.
      * @throws JsonProcessingException if an error occurs while processing the log
      *                                 entry.
+     * @throws LogException
      */
-    public void logDataChange(String message, ChangeInfo data) throws JsonProcessingException {
+    public void logDataChange(String message, ChangeInfo data) throws JsonProcessingException, LogException {
 
         data.getChanges().forEach(change -> {
             change.setOldValue(convertToString(change.getOldValue()));
@@ -229,7 +231,7 @@ public class LHLogger implements Cloneable {
      * @throws JsonProcessingException if an error occurs while processing the log
      *                                 entry.
      */
-    public void logDebug(String message, Object data) throws JsonProcessingException {
+    public void logDebug(String message, Object data) throws JsonProcessingException, LogException {
 
         if (loggerContext.isDebugMode()) {
             LogEntry entry;
