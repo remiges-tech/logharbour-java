@@ -14,7 +14,7 @@ import lombok.Data;
 
 @Data
 public class LoggerContext {
-    private LogPriorityLevels minLogPriority;
+    private LogEntry.LogPriority minLogPriority;
     private final AtomicBoolean debugMode;
 
     /**
@@ -22,16 +22,16 @@ public class LoggerContext {
      * 
      * @param minLogPriority the minimum log priority level for this context
      */
-    public LoggerContext(LogPriorityLevels minLogPriority) {
+    public LoggerContext(LogEntry.LogPriority minLogPriority) {
         this.minLogPriority = minLogPriority;
         this.debugMode = new AtomicBoolean(false);
     }
 
-    public synchronized LogPriorityLevels getMinLogPriority() {
+    public synchronized LogEntry.LogPriority getMinLogPriority() {
         return minLogPriority;
     }
 
-    public synchronized void setMinLogPriority(LogPriorityLevels minLogPriority) {
+    public synchronized void setMinLogPriority(LogEntry.LogPriority minLogPriority) {
         this.minLogPriority = minLogPriority;
     }
 

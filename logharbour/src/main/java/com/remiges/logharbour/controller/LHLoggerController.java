@@ -14,19 +14,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.remiges.logharbour.exception.LogException;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.Status;
-import com.remiges.logharbour.model.LogPriorityLevels;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
-import com.remiges.logharbour.model.LoginDetails;
 import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.service.LHLoggerTestService;
 import com.remiges.logharbour.util.LHLogger;
@@ -161,10 +157,10 @@ public class LHLoggerController {
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
 		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
-				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
+				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG1, "User1",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.WARN, "User1",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "127.1.2.1");
 
 		lhLogger.logActivity("Log Activitiy Test", loginUser);
@@ -189,7 +185,7 @@ public class LHLoggerController {
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
 		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
-				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
+				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
 		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG0, "User2",
@@ -208,10 +204,10 @@ public class LHLoggerController {
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
 		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
-				logharbour.getLoggerContext(LogPriorityLevels.INFO), logharbour.getKafkaTopic(),
+				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG2, "Kra User",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG1, "Kra User",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
 
 		lhLogger.logDebug("Log Activitiy Test", loginUser);
@@ -221,7 +217,7 @@ public class LHLoggerController {
 	@PostMapping("/clone-log")
 	public String activityLogs() throws Exception {
 
-		LoggerContext context = new LoggerContext(LogPriorityLevels.INFO);
+		LoggerContext context = new LoggerContext(LogPriority.INFO);
 		context.setDebugMode(true);
 		PrintWriter printWriter = new PrintWriter("logharbour.txt");
 		LHLogger lhLogger = new LHLogger(kafkaTemplate, printWriter, context, "logharbour", new ObjectMapper());
@@ -247,23 +243,4 @@ public class LHLoggerController {
 
 	}
 
-	/**
-	 * POC of Endpoint to test logging functionality. Creates a log entry with
-	 * predefined details and logs it using the LHLogger.
-	 *
-	 * @return A string message indicating the result of the logging operation.
-	 * @throws JsonProcessingException If there is an error processing JSON.
-	 * @throws LogException
-	 */
-	@GetMapping("/check")
-	public String postLog() throws JsonProcessingException, LogException {
-		LoginDetails loginDetails = new LoginDetails();
-		loginDetails.setId("20");
-		loginDetails.setName("Deepak Kumar");
-
-		LogEntry logEntry = new LogEntry();
-
-		logHarbour.logActivity("suraj", logEntry);
-		return "able to log file";
-	}
 }

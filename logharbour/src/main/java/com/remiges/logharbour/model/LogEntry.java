@@ -12,6 +12,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -58,16 +61,16 @@ public class LogEntry {
         this.data = data;
     }
 
-    public enum LogPriority {
-        DEBUG2,
-        DEBUG1,
-        DEBUG0,
-        INFO,
-        WARN,
-        ERR,
-        CRIT,
-        SEC
-    }
+    // public enum LogPriority {
+    //     DEBUG2,
+    //     DEBUG1,
+    //     DEBUG0,
+    //     INFO,
+    //     WARN,
+    //     ERR,
+    //     CRIT,
+    //     SEC
+    // }
 
     public enum LogType {
         CHANGE,
@@ -80,5 +83,65 @@ public class LogEntry {
         FAILURE,
         SUCCESS
     }
+
+/**
+ * Enum representing different levels of log priorities.
+ */
+public enum LogPriority {
+    DEBUG2(1, "Debug2"),
+    DEBUG1(2, "Debug1"),
+    DEBUG0(3, "Debug0"),
+    INFO(4, "Info"),
+    WARN(5, "Warn"),
+    ERR(6, "Err"),
+    CRIT(7, "Crit"),
+    SEC(8, "Sec"),
+    UNKNOWN(0, "Unknown");
+
+    private final int level;
+    private final String name;
+
+    /**
+     * Constructor for LogPriorityLevels.
+     *
+     * @param level the numerical level of the log priority
+     * @param name  the name of the log priority
+     */
+    LogPriority(int level, String name) {
+        this.level = level;
+        this.name = name;
+    }
+
+    @JsonValue
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Creates a LogPriorityLevels instance from the provided name.
+     *
+     * @param name the name of the log priority level
+     * @return the corresponding LogPriorityLevels instance, or UNKNOWN if no match is found
+     */
+    @JsonCreator
+    public static LogPriority fromName(String name) {
+        for (LogPriority priority : LogPriority.values()) {
+            if (priority.name.equalsIgnoreCase(name)) {
+                return priority;
+            }
+        }
+        return UNKNOWN;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+
 
 }

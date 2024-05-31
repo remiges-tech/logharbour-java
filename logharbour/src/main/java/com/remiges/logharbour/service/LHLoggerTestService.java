@@ -7,7 +7,7 @@ import java.io.PrintWriter;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import com.remiges.logharbour.model.LogPriorityLevels;
+import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.util.Logharbour;
 
@@ -40,8 +40,8 @@ public class LHLoggerTestService implements Logharbour {
     }
 
     @Override
-    public LoggerContext getLoggerContext(LogPriorityLevels minLogPriority) {
-        LoggerContext loggerContext = new LoggerContext(LogPriorityLevels.INFO);
+    public LoggerContext getLoggerContext(LogPriority minLogPriority) {
+        LoggerContext loggerContext = new LoggerContext(LogPriority.INFO);
         loggerContext.setDebugMode(true);
         return loggerContext;
     }
