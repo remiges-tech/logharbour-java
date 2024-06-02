@@ -60,9 +60,38 @@ public class ElasticQueryServices {
         return searchHits;
     }
 
+    /**
+     * Generates and executes an Elasticsearch query to retrieve log entries based
+     * on
+     * various criteria such as application, class, instance, and optional filters
+     * like user, operation, time range, and specific fields.
+     *
+     * @param queryToken       Query token for the realm (currently not used in the
+     *                         query).
+     * @param app              The application name (mandatory).
+     * @param className        The class name of the object (mandatory).
+     * @param instance         The instance ID of the object (mandatory).
+     * @param who              The user who made the changes (optional).
+     * @param op               The operation performed (optional).
+     * @param fromtsStr        Start of the time range (ISO 8601 format, optional).
+     * @param totsStr          End of the time range (ISO 8601 format, optional).
+     * @param ndays            Number of days back from the current time to consider
+     *                         (optional).
+     * @param field            Specific field to filter changes (optional).
+     * @param remoteIP         Remote IP address (currently not used in the query).
+     * @param pri              Log priority (currently not used in the query).
+     * @param searchAfterTs    Timestamp for pagination (currently not used in the
+     *                         query).
+     * @param searchAfterDocId Document ID for pagination (currently not used in the
+     *                         query).
+     * @return SearchHits object containing the search results.
+     * @throws IllegalArgumentException If the provided timestamps are in an invalid
+     *                                  format or
+     *                                  if fromts is after tots.
+     */
     public SearchHits<LogEntry> getQueryForChangeLogs(String queryToken, String app,
             String className, String instance, String who,
-            String op, String fromtsStr, String totsStr, int ndays, String field, String logType,
+            String op, String fromtsStr, String totsStr, int ndays, String field,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
             String searchAfterDocId) {
 
@@ -79,13 +108,18 @@ public class ElasticQueryServices {
         if (who != null && !who.isEmpty()) {
             boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("who").query(who))._toQuery());
         }
+
         if (op != null && !op.isEmpty()) {
             boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("op").query(op))._toQuery());
         }
 
-        // Filter by field if specified
+        if (remoteIP != null && !remoteIP.isEmpty()) {
+            boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("remoteIP").query(remoteIP))._toQuery());
+        }
+
         if (field != null && !field.isEmpty()) {
-            boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("field").query(field))._toQuery());
+            boolQueryBuilder
+                    .must(MatchPhraseQuery.of(m -> m.field("data.changeData.changes.field").query(field))._toQuery());
         }
 
         // Handle timestamp ranges

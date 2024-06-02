@@ -152,7 +152,7 @@ public class LHLoggerController {
 	@PostMapping("/activity-log")
 	public String postActivityLogs() throws Exception {
 
-		LoginUser loginUser = new LoginUser("2", "Suraj", "1234");
+		LoginUser loginUser = new LoginUser("3", "Shivendra", "2121");
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
@@ -172,14 +172,14 @@ public class LHLoggerController {
 	@PostMapping("/changes-log")
 	public String postChangeLogs() throws Exception {
 
-		LoginUser loginUser = new LoginUser("2", "Suraj", "1234");
+		LoginUser loginUser = new LoginUser("3", "Shivendra", "2121");
 
 		ChangeInfo changeInfo = new ChangeInfo();
 		changeInfo.setEntity(loginUser.getName());
 		changeInfo.setOp("name");
 
 		List<ChangeDetails> changeDetails = new ArrayList<>();
-		changeDetails.add(new ChangeDetails("name", loginUser.getId(), "22"));
+		changeDetails.add(new ChangeDetails("id", loginUser.getId(), "34"));
 		changeInfo.setChanges(changeDetails);
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
@@ -190,7 +190,7 @@ public class LHLoggerController {
 
 		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User2",
 				"Update", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "",
-				"127.6.2.1");
+				"127.0.0");
 
 		lhLogger.logDataChange("Log Data change", changeInfo);
 		return "Change Data log posted Successfully";
@@ -226,7 +226,6 @@ public class LHLoggerController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
 			@RequestParam(required = false, defaultValue = "0") int ndays,
 			@RequestParam(required = false) String field,
-			@RequestParam(required = false) String logType,
 			@RequestParam(required = false) String remoteIP,
 			@RequestParam(required = false) LogEntry.LogPriority pri,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String searchAfterTS,
@@ -234,9 +233,7 @@ public class LHLoggerController {
 
 		// Call the service method to get the changes and return the response
 		return logHarbour.getChangesLog(queryToken, app, className, instance, who, op, fromts, tots, ndays, field,
-				logType,
-				remoteIP,
-				pri, searchAfterTS, searchAfterDocID);
+				remoteIP, pri, searchAfterTS, searchAfterDocID);
 	}
 
 }

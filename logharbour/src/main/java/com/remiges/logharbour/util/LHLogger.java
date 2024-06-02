@@ -375,13 +375,13 @@ public class LHLogger implements Cloneable {
 
     public List<LogEntry> getChangesLog(String queryToken, String app,
             String className, String instance, String who,
-            String op, String fromtsStr, String totsStr, int ndays, String field, String logType,
+            String op, String fromtsStr, String totsStr, int ndays, String field,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
             String searchAfterDocId) throws Exception {
 
         SearchHits<LogEntry> search = elasticQueryServices.getQueryForChangeLogs(queryToken, app, className, instance,
                 who,
-                op, fromtsStr, totsStr, ndays, field, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
+                op, fromtsStr, totsStr, ndays, field, remoteIP, pri, searchAfterTs, searchAfterDocId);
 
         return search.getSearchHits().stream().map(SearchHit::getContent).toList();
     }
