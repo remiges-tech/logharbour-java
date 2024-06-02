@@ -260,7 +260,8 @@ public class LHLogger implements Cloneable {
                 debugInfo.setFileName(caller.getFileName());
                 debugInfo.setLineNumber(caller.getLineNumber());
                 debugInfo.setFunctionName(caller.getMethodName());
-                debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
+                // debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
+                debugInfo.setStackTrace(" ");
             }
 
             LogData logData = new LogData();
@@ -377,9 +378,6 @@ public class LHLogger implements Cloneable {
             String op, String fromtsStr, String totsStr, int ndays, String field, String logType,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
             String searchAfterDocId) throws Exception {
-
-        Instant fromts = null;
-        Instant tots = null;
 
         SearchHits<LogEntry> search = elasticQueryServices.getQueryForChangeLogs(queryToken, app, className, instance,
                 who,

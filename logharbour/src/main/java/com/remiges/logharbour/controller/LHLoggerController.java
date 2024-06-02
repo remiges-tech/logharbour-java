@@ -152,7 +152,7 @@ public class LHLoggerController {
 	@PostMapping("/activity-log")
 	public String postActivityLogs() throws Exception {
 
-		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
+		LoginUser loginUser = new LoginUser("2", "Suraj", "1234");
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
@@ -160,7 +160,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.WARN, "User1",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.WARN, "User2",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "127.1.2.1");
 
 		lhLogger.logActivity("Log Activitiy Test", loginUser);
@@ -172,14 +172,14 @@ public class LHLoggerController {
 	@PostMapping("/changes-log")
 	public String postChangeLogs() throws Exception {
 
-		LoginUser loginUser = new LoginUser("2", "Suraj", "948577548");
+		LoginUser loginUser = new LoginUser("2", "Suraj", "1234");
 
 		ChangeInfo changeInfo = new ChangeInfo();
 		changeInfo.setEntity(loginUser.getName());
-		changeInfo.setOp("Updating userId");
+		changeInfo.setOp("name");
 
 		List<ChangeDetails> changeDetails = new ArrayList<>();
-		changeDetails.add(new ChangeDetails("id", loginUser.getId(), "12"));
+		changeDetails.add(new ChangeDetails("name", loginUser.getId(), "22"));
 		changeInfo.setChanges(changeDetails);
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
@@ -188,8 +188,8 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG0, "User2",
-				"Changing", LHLoggerController.class.getName().toString(), "Instance Id", Status.SUCCESS, "",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User2",
+				"Update", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "",
 				"127.6.2.1");
 
 		lhLogger.logDataChange("Log Data change", changeInfo);
@@ -199,7 +199,7 @@ public class LHLoggerController {
 	@PostMapping("/debug-log")
 	public String postDebugLogs() throws Exception {
 
-		LoginUser loginUser = new LoginUser("1", "Test", "7977754045");
+		LoginUser loginUser = new LoginUser("2", "Suraj", "1234");
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
@@ -207,7 +207,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG1, "Kra User",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.SEC, "User2",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
 
 		lhLogger.logDebug("Log Activitiy Test", loginUser);

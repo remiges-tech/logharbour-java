@@ -1,5 +1,7 @@
 package com.remiges.logharbour.service;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +18,8 @@ import com.remiges.logharbour.model.LogEntry;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
+import co.elastic.clients.json.JsonData;
 
 @Service
 public class ElasticQueryServices {
@@ -68,6 +72,8 @@ public class ElasticQueryServices {
         boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("app").query(app))._toQuery());
         boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("className").query(className))._toQuery());
         boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("instanceId").query(instance))._toQuery());
+        // Ensure logType is "CHANGE"
+        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("logType").query("CHANGE"))._toQuery());
 
         // Optional fields
         if (who != null && !who.isEmpty()) {
@@ -75,6 +81,43 @@ public class ElasticQueryServices {
         }
         if (op != null && !op.isEmpty()) {
             boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("op").query(op))._toQuery());
+        }
+
+        // Filter by field if specified
+        if (field != null && !field.isEmpty()) {
+            boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("field").query(field))._toQuery());
+        }
+
+        // Handle timestamp ranges
+        final Instant fromts;
+        final Instant tots;
+
+        try {
+            fromts = (fromtsStr != null && !fromtsStr.isEmpty()) ? Instant.parse(fromtsStr) : null;
+            tots = (totsStr != null && !totsStr.isEmpty()) ? Instant.parse(totsStr) : null;
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
+        }
+
+        // Inter-dependency logic
+        if (fromts != null && tots != null) {
+            if (fromts.isAfter(tots)) {
+                throw new IllegalArgumentException("fromts must be before tots");
+            }
+            boolQueryBuilder.must(RangeQuery
+                    .of(r -> r.field("when").gte(JsonData.of(fromts.toString())).lte(JsonData.of(tots.toString())))
+                    ._toQuery());
+        } else if (fromts != null) {
+            boolQueryBuilder.must(RangeQuery.of(r -> r.field("when").gte(JsonData.of(fromts.toString())))._toQuery());
+        } else if (tots != null) {
+            boolQueryBuilder.must(RangeQuery.of(r -> r.field("when").lte(JsonData.of(tots.toString())))._toQuery());
+        } else if (ndays > 0) {
+            Instant end = Instant.now();
+            Instant start = end.minusSeconds(ndays * 86400L);
+            boolQueryBuilder.must(RangeQuery
+                    .of(r -> r.field("when").gte(JsonData.of(start.toString())).lte(JsonData.of(end.toString())))
+                    ._toQuery());
         }
 
         Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery()).build();
