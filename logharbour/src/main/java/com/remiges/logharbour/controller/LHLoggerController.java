@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
+import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.Status;
@@ -54,7 +55,7 @@ public class LHLoggerController {
 	}
 
 	@GetMapping("/data-logs")
-	public List<LogEntry> getLogs(
+	public GetLogsResponse getLogs(
 			@RequestParam(required = true) String queryToken,
 			@RequestParam(required = false) String app,
 			@RequestParam(required = false) String who,
