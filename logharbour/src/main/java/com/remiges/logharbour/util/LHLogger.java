@@ -421,20 +421,32 @@ public class LHLogger implements Cloneable {
 
     private static final int LOGHARBOUR_GETLOGS_MAXREC = 5;
 
-    public List<LogEntry> getLogs(String queryToken, String app, String who,
+    public GetLogsResponse getLogs(String queryToken, String app, String who,
             String className, String instance,
             String op, String fromtsStr, String totsStr, int ndays, String logType,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
             String searchAfterDocId) throws Exception {
 
-        Instant fromts = null;
-        Instant tots = null;
+       GetLogsResponse getLogsResponse = new GetLogsResponse();
+
+        // Instant fromts = null;
+        // Instant tots = null;
 
         SearchHits<LogEntry> search = elasticQueryServices.getQueryForLogs(queryToken, app, who, className, instance,
                 op, fromtsStr, totsStr, ndays, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
 
-        return search.getSearchHits().stream().map(SearchHit::getContent).toList();
+                long totalHits = search.getTotalHits();
 
+        List<LogEntry> logEntries = search.getSearchHits().stream().map(SearchHit::getContent).limit(LOGHARBOUR_GETLOGS_MAXREC).toList();
+        if (LOGHARBOUR_GETLOGS_MAXREC <= totalHits) {
+            getLogsResponse.setLogs(logEntries);
+            getLogsResponse.setNrec(totalHits);
+            return getLogsResponse;
+        }
+        getLogsResponse.setLogs(logEntries);
+        getLogsResponse.setNrec(totalHits);
+        return getLogsResponse;
+        
         // Parse the timestamps
         /*
          * try {
