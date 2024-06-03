@@ -7,7 +7,6 @@ import java.time.format.DateTimeParseException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.Query;
@@ -17,6 +16,7 @@ import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.model.LogEntry;
 
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
@@ -25,7 +25,7 @@ import co.elastic.clients.json.JsonData;
 @Service
 public class ElasticQueryServices {
 
-     @Autowired
+    @Autowired
     private ElasticsearchOperations elasticsearchOperations;
 
     public SearchHits<LogEntry> getQueryForLogs(String queryToken, String app, String who,
@@ -61,40 +61,54 @@ public class ElasticQueryServices {
             boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query(logType))._toQuery());
         }
         if (pri != null) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.PRIORITY).query(pri.toString()))._toQuery());
+            boBuilder.must(
+                    MatchPhraseQuery.of(m -> m.field(LogharbourConstants.PRIORITY).query(pri.toString()))._toQuery());
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-        LocalDateTime fromts = fromtsStr != null && !fromtsStr.isEmpty() ? LocalDateTime.parse(fromtsStr, formatter) : null;
+        LocalDateTime fromts = fromtsStr != null && !fromtsStr.isEmpty() ? LocalDateTime.parse(fromtsStr, formatter)
+                : null;
         LocalDateTime tots = totsStr != null && !totsStr.isEmpty() ? LocalDateTime.parse(totsStr, formatter) : null;
 
         if (fromts != null && tots != null) {
             if (tots.isAfter(fromts)) {
-                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.WHEN).query(fromts.toString()))._toQuery());
-                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.WHEN).query(tots.toString()))._toQuery());
+                boBuilder.must(RangeQuery.of(
+                        m -> m.field(LogharbourConstants.WHEN).gte(JsonData.of(fromtsStr)).lte(JsonData.of(totsStr)))
+                        ._toQuery());
             } else {
                 throw new IllegalArgumentException("tots must be after fromts");
             }
         } else if (fromts != null) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.WHEN).query(fromts.toString()))._toQuery());
+            boBuilder.must(RangeQuery.of(
+                    m -> m.field(LogharbourConstants.WHEN).gte(JsonData.of(fromtsStr)))
+                    ._toQuery());
         } else if (tots != null) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.WHEN).query(tots.toString()))._toQuery());
+            boBuilder.must(RangeQuery.of(
+                    m -> m.field(LogharbourConstants.WHEN).lte(JsonData.of(totsStr)))
+                    ._toQuery());
         } else if (ndays > 0) {
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime ndaysAgo = now.minusDays(ndays);
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.WHEN).query(ndaysAgo.toString()))._toQuery());
+            LocalDateTime end = LocalDateTime.now();
+            LocalDateTime start = end.minusDays(ndays);
+
+            boBuilder.must(RangeQuery.of(
+                    m -> m.field(LogharbourConstants.WHEN).gte(JsonData.of(start.toString()))
+                            .lte(JsonData.of(end.toString())))
+                    ._toQuery());
         }
 
-        Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery()).build();
-        
-        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
-        return searchHits;
-        
-        
+        if (searchAfterTs != null && !searchAfterTs.isEmpty()) {
+
+            boBuilder.must(RangeQuery.of(
+                    m -> m.field(LogharbourConstants.WHEN).gt(JsonData.of(searchAfterTs)))
+                    ._toQuery());
+
+        }
+        Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
+                .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Asc)))
+                .build();
+
+        return elasticsearchOperations.search(query, LogEntry.class);
     }
-
-
-
 
     /**
      * Generates and executes an Elasticsearch query to retrieve log entries based

@@ -468,17 +468,15 @@ public class LHLogger implements Cloneable {
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
             String searchAfterDocId) throws Exception {
 
-       GetLogsResponse getLogsResponse = new GetLogsResponse();
-
-        // Instant fromts = null;
-        // Instant tots = null;
+        GetLogsResponse getLogsResponse = new GetLogsResponse();
 
         SearchHits<LogEntry> search = elasticQueryServices.getQueryForLogs(queryToken, app, who, className, instance,
                 op, fromtsStr, totsStr, ndays, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
 
-                long totalHits = search.getTotalHits();
+        long totalHits = search.getTotalHits();
 
-        List<LogEntry> logEntries = search.getSearchHits().stream().map(SearchHit::getContent).limit(LOGHARBOUR_GETLOGS_MAXREC).toList();
+        List<LogEntry> logEntries = search.getSearchHits().stream().map(SearchHit::getContent)
+                .limit(LOGHARBOUR_GETLOGS_MAXREC).toList();
         if (LOGHARBOUR_GETLOGS_MAXREC <= totalHits) {
             getLogsResponse.setLogs(logEntries);
             getLogsResponse.setNrec(totalHits);
@@ -487,69 +485,6 @@ public class LHLogger implements Cloneable {
         getLogsResponse.setLogs(logEntries);
         getLogsResponse.setNrec(totalHits);
         return getLogsResponse;
-        
-        // Parse the timestamps
-        /*
-         * try {
-         * if (fromtsStr != null && !fromtsStr.isEmpty()) {
-         * fromts = Instant.parse(fromtsStr);
-         * }
-         * if (totsStr != null && !totsStr.isEmpty()) {
-         * tots = Instant.parse(totsStr);
-         * }
-         * } catch (DateTimeParseException e) {
-         * throw new IllegalArgumentException(
-         * "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
-         * }
-         * 
-         * // Validate timestamp range
-         * if (fromts != null && tots != null && fromts.isAfter(tots)) {
-         * throw new IllegalArgumentException("fromts must be before tots");
-         * }
-         * 
-         * // Convert the priority to string
-         * String priStr = pri != null ? pri.toString() : null;
-         * 
-         * // Fetch logs based on the constructed boolean query
-         * List<LogEntry> filteredLogs = logEntryRepository.findLogsByQuery(logType,
-         * fromtsStr, totsStr, who, priStr,
-         * remoteIP, op);
-         * 
-         * int totalLogs = filteredLogs.size();
-         * 
-         * // Apply pagination using searchAfterTS and searchAfterDocID
-         * if (searchAfterTs != null && !searchAfterTs.isEmpty() && searchAfterDocId !=
-         * null
-         * && !searchAfterDocId.isEmpty()) {
-         * Instant searchAfterInstant = Instant.parse(searchAfterTs);
-         * filteredLogs = filteredLogs.stream()
-         * .filter(log -> {
-         * Instant logInstant = Instant.parse(log.getWhen());
-         * return logInstant.isAfter(searchAfterInstant) ||
-         * (logInstant.equals(searchAfterInstant) &&
-         * log.getId().compareTo(searchAfterDocId) > 0);
-         * })
-         * .collect(Collectors.toList());
-         * }
-         * 
-         * // Ensure we do not exceed the LOGHARBOUR_GETLOGS_MAXREC
-         * int end = Math.min(LOGHARBOUR_GETLOGS_MAXREC, filteredLogs.size());
-         * List<LogEntry> paginatedLogs = filteredLogs.subList(0, end);
-         * 
-         * // Set next searchAfterTs and searchAfterDocId for the next batch
-         * String nextSearchAfterTs = null;
-         * String nextSearchAfterDocId = null;
-         * 
-         * if (!paginatedLogs.isEmpty() && paginatedLogs.size() == end) {
-         * LogEntry lastLog = paginatedLogs.get(paginatedLogs.size() - 1);
-         * nextSearchAfterTs = lastLog.getWhen();
-         * nextSearchAfterDocId = lastLog.getId();
-         * }
-         * 
-         * // Create and return the response
-         * return new GetLogsResponse(paginatedLogs, totalLogs, end, null,
-         * nextSearchAfterTs, nextSearchAfterDocId);
-         */
     }
 
     public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
