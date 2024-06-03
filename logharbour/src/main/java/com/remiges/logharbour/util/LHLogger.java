@@ -3,14 +3,13 @@ package com.remiges.logharbour.util;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.kafka.common.KafkaException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -27,7 +26,6 @@ import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.exception.LogException;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.DebugInfo;
-import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogData;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
@@ -68,8 +66,6 @@ public class LHLogger implements Cloneable {
     private LoggerContext loggerContext;
     private PrintWriter writer;
     private ObjectMapper objectMapper;
-
-    private static final Logger logger = LoggerFactory.getLogger(LHLogger.class);
 
     @Autowired
     private ElasticQueryServices elasticQueryServices;
@@ -148,16 +144,34 @@ public class LHLogger implements Cloneable {
      *
      * @param logMessage The log message to be logged.
      */
-    private void log(String logMessage) throws LogException {
-        if (shouldLog(pri)) {
+
+    private void log(String logMessage, LogPriority priority) throws LogException {
+        try {
+            // Write log message to file
+            writer.println(logMessage);
+            writer.flush();
+
+            // Check for errors in the writer
+            if (writer.checkError()) {
+                throw new LogException("Error occurred while writing to the log file.");
+            }
+        } catch (Exception e) {
+            throw new LogException("Failed to write log message to file", e);
+        }
+
+        // Send to Kafka if the priority check passes
+        if (shouldLog(priority)) {
             try {
-                this.kafkaTemplate.send(topic, logMessage);
+                this.kafkaTemplate.send(topic, logMessage).get(); // Ensure the message is sent
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interrupted state
+                throw new LogException("Thread was interrupted while sending log message to Kafka", e);
+            } catch (ExecutionException e) {
+                throw new LogException("Failed to send log message to Kafka", e.getCause());
+            } catch (KafkaException e) {
+                throw new LogException("Kafka error occurred while sending log message", e);
             } catch (Exception e) {
-                writer.println(logMessage);
-                writer.flush();
-                writer.close();
-                e.printStackTrace();
-                throw new LogException("Failed to send log message to Kafka", e);
+                throw new LogException("Unexpected error occurred while sending log message to Kafka", e);
             }
         }
     }
@@ -184,22 +198,32 @@ public class LHLogger implements Cloneable {
      *                                 entry.
      * @throws LogException
      */
-    public void logActivity(String message, Object data) throws JsonProcessingException, LogException {
 
+    public void logActivity(String message, Object data) throws LogException {
         LogData logData = null;
         LogEntry entry;
-        if (data != null) {
-            // Convert the data to a JSON string
-            String activityData = convertToString(data);
-            logData = new LogData();
-            logData.setActivityData(activityData);
-            entry = newLogEntry(message, logData);
-        } else {
-            entry = newLogEntry(message, null);
-        }
-        if (shouldLog(entry.getPri())) {
+
+        try {
+            if (data != null) {
+                // Convert the data to a JSON string
+                String activityData = convertToString(data);
+                logData = new LogData();
+                logData.setActivityData(activityData);
+                entry = newLogEntry(message, logData);
+            } else {
+                entry = newLogEntry(message, null);
+            }
+
             entry.setLogType(LogType.ACTIVITY);
-            log(objectMapper.writeValueAsString(entry));
+            String logMessage = objectMapper.writeValueAsString(entry);
+
+            log(logMessage, entry.getPri());
+        } catch (JsonProcessingException e) {
+            throw new LogException("Failed to process JSON for logging activity", e);
+        } catch (LogException e) {
+            throw new LogException("Failed to log activity", e);
+        } catch (Exception e) {
+            throw new LogException("Unexpected error occurred during logging activity", e);
         }
     }
 
@@ -212,22 +236,31 @@ public class LHLogger implements Cloneable {
      *                                 entry.
      * @throws LogException
      */
-    public void logDataChange(String message, ChangeInfo data) throws JsonProcessingException, LogException {
 
-        data.getChanges().forEach(change -> {
-            change.setOldValue(convertToString(change.getOldValue()));
-            change.setNewValue(convertToString(change.getNewValue()));
-        });
+    public void logDataChange(String message, ChangeInfo data) throws LogException {
+        try {
+            // Process changes and convert values to string
+            data.getChanges().forEach(change -> {
+                change.setOldValue(convertToString(change.getOldValue()));
+                change.setNewValue(convertToString(change.getNewValue()));
+            });
 
-        LogData logData = new LogData();
-        logData.setChangeData(data);
+            LogData logData = new LogData();
+            logData.setChangeData(data);
 
-        LogEntry entry = newLogEntry(message, logData);
-        entry.setLogType(LogEntry.LogType.CHANGE);
-        if (shouldLog(entry.getPri())) {
-            log(objectMapper.writeValueAsString(entry));
+            LogEntry entry = newLogEntry(message, logData);
+            entry.setLogType(LogEntry.LogType.CHANGE);
+
+            // Serialize log entry to JSON string
+            String logMessage = objectMapper.writeValueAsString(entry);
+            log(logMessage, entry.getPri());
+        } catch (JsonProcessingException e) {
+            throw new LogException("Failed to process JSON while logging data change", e);
+        } catch (LogException e) {
+            throw new LogException("Failed to log data change", e);
+        } catch (Exception e) {
+            throw new LogException("Unexpected error occurred while logging data change", e);
         }
-
     }
 
     /**
@@ -238,39 +271,46 @@ public class LHLogger implements Cloneable {
      * @throws JsonProcessingException if an error occurs while processing the log
      *                                 entry.
      */
-    public void logDebug(String message, Object data) throws JsonProcessingException, LogException {
 
-        if (loggerContext.isDebugMode()) {
-            LogEntry entry;
-            DebugInfo debugInfo = new DebugInfo();
-            debugInfo.setPid(getPid());
-            debugInfo.setRuntime(System.getProperty("java.version"));
-            debugInfo.setData(data.toString()); // Convert the entire data to a JSON string
+    public void logDebug(String message, Object data) throws LogException {
+        try {
+            if (loggerContext.isDebugMode()) {
+                LogEntry entry;
+                DebugInfo debugInfo = new DebugInfo();
+                debugInfo.setPid(getPid());
+                debugInfo.setRuntime(System.getProperty("java.version"));
+                debugInfo.setData(data.toString()); // Convert the entire data to a JSON string
 
-            // Retrieve the current thread's stack trace elements.
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            /**
-             * Check if the stack trace has more than two elements.
-             * The first two elements typically represent `getStackTrace` and `getThread`
-             * calls,
-             * so the third element (index 2) will be the actual caller of this method.
-             */
-            if (stackTrace.length > 2) {
-                StackTraceElement caller = stackTrace[2];
-                debugInfo.setFileName(caller.getFileName());
-                debugInfo.setLineNumber(caller.getLineNumber());
-                debugInfo.setFunctionName(caller.getMethodName());
-                // debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
-                debugInfo.setStackTrace(" ");
+                // Retrieve the current thread's stack trace elements.
+                StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+                /**
+                 * Check if the stack trace has more than two elements.
+                 * The first two elements typically represent `getStackTrace` and `getThread`
+                 * calls,
+                 * so the third element (index 2) will be the actual caller of this method.
+                 */
+                if (stackTrace.length > 2) {
+                    StackTraceElement caller = stackTrace[2];
+                    debugInfo.setFileName(caller.getFileName());
+                    debugInfo.setLineNumber(caller.getLineNumber());
+                    debugInfo.setFunctionName(caller.getMethodName());
+                    // debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
+                    debugInfo.setStackTrace(" ");
+                }
+
+                LogData logData = new LogData();
+                logData.setDebugData(debugInfo);
+                entry = newLogEntry(message, logData);
+                entry.setLogType(LogEntry.LogType.DEBUG);
+                String logMessage = objectMapper.writeValueAsString(entry);
+                log(logMessage, entry.getPri());
             }
-
-            LogData logData = new LogData();
-            logData.setDebugData(debugInfo);
-            entry = newLogEntry(message, logData);
-            entry.setLogType(LogEntry.LogType.DEBUG);
-            if (shouldLog(entry.getPri())) {
-                log(objectMapper.writeValueAsString(entry));
-            }
+        } catch (JsonProcessingException e) {
+            throw new LogException("Failed to process JSON while logging debug data", e);
+        } catch (LogException e) {
+            throw new LogException("Failed to log debug data", e);
+        } catch (Exception e) {
+            throw new LogException("Unexpected error occurred while logging debug data", e);
         }
     }
 

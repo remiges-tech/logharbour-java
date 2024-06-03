@@ -1,7 +1,6 @@
 package com.remiges.logharbour.controller;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
-import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.Status;
-import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.model.LogharbourRequestBo;
 import com.remiges.logharbour.model.LoginUser;
 import com.remiges.logharbour.service.LHLoggerTestService;
@@ -160,7 +157,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.WARN, "User2",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG0, "User2",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "127.1.2.1");
 
 		lhLogger.logActivity("Log Activitiy Test", loginUser);
@@ -172,7 +169,7 @@ public class LHLoggerController {
 	@PostMapping("/changes-log")
 	public String postChangeLogs() throws Exception {
 
-		LoginUser loginUser = new LoginUser("3", "Shivendra", "2121");
+		LoginUser loginUser = new LoginUser("4", "Shivendra", "2121");
 
 		ChangeInfo changeInfo = new ChangeInfo();
 		changeInfo.setEntity(loginUser.getName());
@@ -188,8 +185,8 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.INFO, "User2",
-				"Update", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG1, "User3",
+				"Update", LHLogger.class.getName().toString(), "instance3", Status.SUCCESS, "",
 				"127.0.0");
 
 		lhLogger.logDataChange("Log Data change", changeInfo);
@@ -207,7 +204,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.SEC, "User2",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG2, "User2",
 				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
 
 		lhLogger.logDebug("Log Activitiy Test", loginUser);
