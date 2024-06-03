@@ -128,7 +128,7 @@ public class ElasticQueryServices {
      * @param ndays            Number of days back from the current time to consider
      *                         (optional).
      * @param field            Specific field to filter changes (optional).
-     * @param remoteIP         Remote IP address (currently not used in the query).
+     * @param remoteIP         Remote IP address (optional).
      * @param pri              Log priority (currently not used in the query).
      * @param searchAfterTs    Timestamp for pagination (currently not used in the
      *                         query).
@@ -143,33 +143,33 @@ public class ElasticQueryServices {
     public SearchHits<LogEntry> getQueryForChangeLogs(String queryToken, String app,
             String className, String instance, String who,
             String op, String fromtsStr, String totsStr, int ndays, String field,
-            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
-            String searchAfterDocId) {
+            String remoteIP) {
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
         // Mandatory fields
-        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("app").query(app))._toQuery());
-        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("className").query(className))._toQuery());
-        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("instanceId").query(instance))._toQuery());
+        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.APP).query(app))._toQuery());
+        boolQueryBuilder
+                .must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.CLASS_NAME).query(className))._toQuery());
+        boolQueryBuilder
+                .must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.INSTANCE_ID).query(instance))._toQuery());
         // Ensure logType is "CHANGE"
-        boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field("logType").query("CHANGE"))._toQuery());
+        boolQueryBuilder
+                .must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
 
         // Optional fields
-        addMatchPhraseQuery(boolQueryBuilder, "who", who);
-        addMatchPhraseQuery(boolQueryBuilder, "op", op);
-        addMatchPhraseQuery(boolQueryBuilder, "remoteIP", remoteIP);
+        addMatchPhraseQuery(boolQueryBuilder, LogharbourConstants.WHO, who);
+        addMatchPhraseQuery(boolQueryBuilder, LogharbourConstants.OP, op);
+        addMatchPhraseQuery(boolQueryBuilder, LogharbourConstants.REMOTE_IP, remoteIP);
         addMatchPhraseQuery(boolQueryBuilder, "data.changeData.changes.field", field);
 
         // Handle timestamp ranges
         addTimestampRangeQuery(boolQueryBuilder, fromtsStr, totsStr, ndays);
 
-        Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery()).build();
+        Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery())
+                .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Asc))).build();
 
-        SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query,
-                LogEntry.class);
-
-        return searchHits;
+        return elasticsearchOperations.search(query, LogEntry.class);
 
     }
 
@@ -224,17 +224,21 @@ public class ElasticQueryServices {
                 throw new InvalidTimestampRangeException("fromts must be before tots");
             }
             boolQueryBuilder.must(RangeQuery
-                    .of(r -> r.field("when").gte(JsonData.of(fromts.toString())).lte(JsonData.of(tots.toString())))
+                    .of(r -> r.field(LogharbourConstants.WHEN).gte(JsonData.of(fromts.toString()))
+                            .lte(JsonData.of(tots.toString())))
                     ._toQuery());
         } else if (fromts != null) {
-            boolQueryBuilder.must(RangeQuery.of(r -> r.field("when").gte(JsonData.of(fromts.toString())))._toQuery());
+            boolQueryBuilder.must(RangeQuery
+                    .of(r -> r.field(LogharbourConstants.WHEN).gte(JsonData.of(fromts.toString())))._toQuery());
         } else if (tots != null) {
-            boolQueryBuilder.must(RangeQuery.of(r -> r.field("when").lte(JsonData.of(tots.toString())))._toQuery());
+            boolQueryBuilder.must(
+                    RangeQuery.of(r -> r.field(LogharbourConstants.WHEN).lte(JsonData.of(tots.toString())))._toQuery());
         } else if (ndays > 0) {
             Instant end = Instant.now();
             Instant start = end.minusSeconds(ndays * 86400L);
             boolQueryBuilder.must(RangeQuery
-                    .of(r -> r.field("when").gte(JsonData.of(start.toString())).lte(JsonData.of(end.toString())))
+                    .of(r -> r.field(LogharbourConstants.WHEN).gte(JsonData.of(start.toString()))
+                            .lte(JsonData.of(end.toString())))
                     ._toQuery());
         }
     }

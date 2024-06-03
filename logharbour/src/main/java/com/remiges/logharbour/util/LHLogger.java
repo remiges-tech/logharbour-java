@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.exception.LogException;
+import com.remiges.logharbour.exception.LogQueryException;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.DebugInfo;
 import com.remiges.logharbour.model.GetLogsResponse;
@@ -414,17 +415,35 @@ public class LHLogger implements Cloneable {
         return logs;
     }
 
-    public List<LogEntry> getChangesLog(String queryToken, String app,
-            String className, String instance, String who,
+    // public List<LogEntry> getChangesLog(String queryToken, String app,
+    // String className, String instance, String who,
+    // String op, String fromtsStr, String totsStr, int ndays, String field,
+    // String remoteIP) throws Exception {
+
+    // SearchHits<LogEntry> search =
+    // elasticQueryServices.getQueryForChangeLogs(queryToken, app, className,
+    // instance,
+    // who,
+    // op, fromtsStr, totsStr, ndays, field, remoteIP);
+
+    // return search.getSearchHits().stream().map(SearchHit::getContent).toList();
+    // }
+    public List<LogEntry> getChangesLog(String queryToken, String app, String className, String instance, String who,
             String op, String fromtsStr, String totsStr, int ndays, String field,
-            String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
-            String searchAfterDocId) throws Exception {
+            String remoteIP) {
 
-        SearchHits<LogEntry> search = elasticQueryServices.getQueryForChangeLogs(queryToken, app, className, instance,
-                who,
-                op, fromtsStr, totsStr, ndays, field, remoteIP, pri, searchAfterTs, searchAfterDocId);
+        try {
+            SearchHits<LogEntry> searchHits = elasticQueryServices.getQueryForChangeLogs(queryToken, app, className,
+                    instance,
+                    who, op, fromtsStr, totsStr, ndays,
+                    field, remoteIP);
 
-        return search.getSearchHits().stream().map(SearchHit::getContent).toList();
+            return searchHits.getSearchHits().stream()
+                    .map(SearchHit::getContent)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new LogQueryException("Error occurred while fetching change logs", e);
+        }
     }
 
     /**

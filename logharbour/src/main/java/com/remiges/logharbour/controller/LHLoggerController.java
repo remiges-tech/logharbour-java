@@ -186,7 +186,7 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG1, "User3",
+		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.SEC, "User7",
 				"Update", LHLogger.class.getName().toString(), "instance3", Status.SUCCESS, "",
 				"127.0.0");
 
@@ -224,14 +224,11 @@ public class LHLoggerController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
 			@RequestParam(required = false, defaultValue = "0") int ndays,
 			@RequestParam(required = false) String field,
-			@RequestParam(required = false) String remoteIP,
-			@RequestParam(required = false) LogEntry.LogPriority pri,
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String searchAfterTS,
-			@RequestParam(required = false) String searchAfterDocID) throws Exception {
+			@RequestParam(required = false) String remoteIP) throws Exception {
 
 		// Call the service method to get the changes and return the response
 		return logHarbour.getChangesLog(queryToken, app, className, instance, who, op, fromts, tots, ndays, field,
-				remoteIP, pri, searchAfterTS, searchAfterDocID);
+				remoteIP);
 	}
 
 }
