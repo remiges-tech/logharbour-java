@@ -18,12 +18,14 @@ import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.Status;
+import com.remiges.logharbour.model.request.LoggerRequest;
 import com.remiges.logharbour.model.request.LogharbourRequestBo;
 import com.remiges.logharbour.model.request.LoginUser;
 import com.remiges.logharbour.model.response.GetLogsResponse;
 import com.remiges.logharbour.service.LHLoggerTestService;
 import com.remiges.logharbour.util.LHLogger;
 import com.remiges.logharbour.util.Logharbour;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 public class LHLoggerController {
@@ -192,21 +194,22 @@ public class LHLoggerController {
 	}
 
 	@PostMapping("/debug-log")
-	public String postDebugLogs() throws Exception {
+	public String postDebugLogs(@RequestBody LoggerRequest request) throws Exception {
 
-		LoginUser loginUser = new LoginUser("2", "Suraj", "1234");
+		LoginUser loginUser = new LoginUser(request.getUserId(), request.getUserName(), request.getPassword());
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
 		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
-				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
+				logharbour.getLoggerContext(request.getLogPriority()), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG2, "User2",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "187.0.2.1");
+		lhLogger.setLogDetails(request.getLogSource(), request.getLogCategory(), request.getModule(),
+				request.getLogPriority(), request.getUser(), request.getAction(),
+				request.getLoggerClassName(), request.getInstanceId(), request.getStatus(),
+				request.getAdditionalInfo(), request.getIpAddress());
 
-		lhLogger.logDebug("Log Activitiy Test", loginUser);
+		lhLogger.logDebug(request.getMessage(), loginUser);
 		return "Debug Data log posted Successfully";
 	}
-
 }
