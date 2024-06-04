@@ -2,8 +2,10 @@ package com.remiges.logharbour.util;
 
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -32,12 +34,14 @@ import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
 import com.remiges.logharbour.model.request.LogharbourRequestBo;
 import com.remiges.logharbour.model.response.GetLogsResponse;
+import com.remiges.logharbour.model.response.ResponseBO;
 import com.remiges.logharbour.service.ElasticQueryServices;
 import com.remiges.logharbour.service.LoggerContext;
 
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
+import co.elastic.clients.json.JsonData;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -457,116 +461,106 @@ public class LHLogger {
         return getLogsResponse;
     }
 
-    public List<LogEntry> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
+    /**
+	 * Retrieves logs based on the provided LogharbourRequestBo, returning counts of occurrences for each value of the specified attribute.
+	 *
+	 * @param logharbourRequestBo The LogharbourRequestBo containing the search parameters.
+	 * @return A ResponseBO containing a map of attribute values to their respective counts, along with status information.
+	 * @throws Exception If an error occurs during the log retrieval process.
+	 */
+	public ResponseBO<Map<String, Long>> getSetlogs(LogharbourRequestBo logharbourRequestBo) throws Exception {
 
-        try {
-            System.out.println("my first request data here !!!!!!!!!");
-            if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
-                throw new IllegalArgumentException("query token can not pass null or empty");
-            }
-            return this.processSearch(logharbourRequestBo, logharbourRequestBo.getSetAttr());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return this.processSearch(logharbourRequestBo, logharbourRequestBo.getSetAttr());
-    }
+		try {
+			System.out.println("my first request data here !!!!!!!!!");
+			if (logharbourRequestBo.getQueryToken() == null && logharbourRequestBo.getQueryToken().isEmpty()) {
+				throw new IllegalArgumentException("query token can not pass null or empty");
+			}
+			return this.processSearch(logharbourRequestBo, logharbourRequestBo.getSetAttr());
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return this.processSearch(logharbourRequestBo, logharbourRequestBo.getSetAttr());
+	}
 
-    @Autowired
-    private ElasticsearchOperations elasticsearchOperations;
+	@Autowired
+	private ElasticsearchOperations elasticsearchOperations;
+	/**
+	 * Processes a search based on the provided LogharbourRequestBo and attribute, returning the counts of occurrences for each value of the specified attribute.
+	 *
+	 * @param logharbourRequestBo The LogharbourRequestBo containing the search parameters.
+	 * @param getsetAttr The attribute for which counts are to be calculated.
+	 * @return A ResponseBO containing a map of attribute values to their respective counts, along with status information.
+	 */
+	public ResponseBO<Map<String, Long>> processSearch(LogharbourRequestBo logharbourRequestBo, String getsetAttr) {
+		try {
+			BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-    public List<LogEntry> processSearch(LogharbourRequestBo logharbourRequestBo, String getsetAttr) {
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.APP, logharbourRequestBo.getApp());
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.WHO, logharbourRequestBo.getWho());
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.CLASS_NAME, logharbourRequestBo.getClassName());
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.OP, logharbourRequestBo.getOp());
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.REMOTE_IP, logharbourRequestBo.getRemoteIP());
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.INSTANCE_ID, logharbourRequestBo.getInstance());
+			this.appendQuery(boolQueryBuilder, LogharbourConstants.LOG_TYPE, logharbourRequestBo.getType());
+			
+			this.addRangeQuery(boolQueryBuilder, LogharbourConstants.WHEN, logharbourRequestBo.getFromTs(),logharbourRequestBo.getToTs());
+			
+			Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery()).build();
 
-        try {
-            BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+			SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
+			List<LogEntry> loggerList = searchHits.getSearchHits().stream().map(SearchHit::getContent).toList();
+			
+			if(loggerList.isEmpty()) {
+				return new ResponseBO<>(null, LogharbourConstants.FAILURE, LogharbourConstants.NOT_FOUND_CODE,
+						LogharbourConstants.NOT_FOUND_MESSAGE);
+			}
+			Map<String, Long> attributeCounts = loggerList.stream().collect(Collectors.groupingBy(data -> {
+				try {
+					Field field = data.getClass().getDeclaredField(getsetAttr);
+					field.setAccessible(true);
+					return (String) field.get(data);
+				} catch (NoSuchFieldException | IllegalAccessException e) {
+					e.printStackTrace();
+					return "";
+				}
+			}, Collectors.counting()));
+			return new ResponseBO<>(attributeCounts, LogharbourConstants.SUCCESS, LogharbourConstants.SUCCESS_CODE,
+					LogharbourConstants.SUCCESS_MESSAGE);
 
-            if (logharbourRequestBo.getApp() != null && !logharbourRequestBo.getApp().isEmpty()) {
-                boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.APP).query("Kra"))._toQuery());
-            }
-            if (logharbourRequestBo.getWho() != null && !logharbourRequestBo.getWho().isEmpty()) {
-                boolQueryBuilder.must(MatchQuery.of(m -> m.field(LogharbourConstants.WHO).query("User3"))._toQuery());
-            }
-            if (logharbourRequestBo.getClassName() != null && !logharbourRequestBo.getClassName().isEmpty()) {
-                boolQueryBuilder.must(MatchQuery
-                        .of(m -> m.field(LogharbourConstants.CLASS_NAME).query(logharbourRequestBo.getClassName()))
-                        ._toQuery());
-            }
-            if (logharbourRequestBo.getOp() != null && !logharbourRequestBo.getOp().isEmpty()) {
-                boolQueryBuilder.must(MatchQuery
-                        .of(m -> m.field(LogharbourConstants.OP).query(logharbourRequestBo.getOp()))._toQuery());
-            }
-            if (logharbourRequestBo.getRemoteIP() != null && !logharbourRequestBo.getRemoteIP().isEmpty()) {
-                boolQueryBuilder.must(MatchQuery
-                        .of(m -> m.field(LogharbourConstants.REMOTE_IP).query(logharbourRequestBo.getRemoteIP()))
-                        ._toQuery());
-            }
-            if (logharbourRequestBo.getFromTs() != null) {
-                boolQueryBuilder.must(MatchQuery
-                        .of(m -> m.field(LogharbourConstants.WHEN).query(logharbourRequestBo.getFromTs().toString()))
-                        ._toQuery());
-            }
-            if (logharbourRequestBo.getToTs() != null) {
-                boolQueryBuilder.must(MatchQuery
-                        .of(m -> m.field(LogharbourConstants.WHEN).query(logharbourRequestBo.getToTs().toString()))
-                        ._toQuery());
-            }
-            // if (logharbourRequestBo.getNDays() == null) {
-            // boolQueryBuilder.must(MatchQuery.of(m ->
-            // m.field("who").query(logharbourRequestBo.getNDays()))._toQuery());
-            // }
-            if (logharbourRequestBo.getInstance() != null) {
-                boolQueryBuilder.must(MatchQuery
-                        .of(m -> m.field(LogharbourConstants.INSTANCE_ID).query(logharbourRequestBo.getInstance()))
-                        ._toQuery());
-            }
-            if (logharbourRequestBo.getType() != null && !logharbourRequestBo.getType().isEmpty()) {
-                boolQueryBuilder.must(
-                        MatchQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query(logharbourRequestBo.getType()))
-                                ._toQuery());
-            }
-            /*********************************************************************************************************************/
-            // Query query = NativeQuery.builder()
-            // .withQuery(boolQueryBuilder.build()._toQuery())
-            // .build();
-            //
-            // SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query,
-            // LogEntry.class);
-            // List<LogEntry> loggerList = searchHits.getSearchHits()
-            // .stream()
-            // .map(SearchHit::getContent)
-            // .toList();
-            // return loggerList;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+	/**
+	 * Appends a query clause to a BoolQuery builder based on the provided field and value.
+	 *
+	 * @param boolQueryBuilder The BoolQuery builder to append the query to.
+	 * @param field The field to query.
+	 * @param value The value to match.
+	 */
+	private void appendQuery(BoolQuery.Builder boolQueryBuilder, String field, String value) {
+		if (value!=null&& field!=null) {
+			boolQueryBuilder.must(MatchQuery.of(m -> m.field(field).query(value))._toQuery());
+	}
+	}
+	/**
+	 * Adds a range query clause to a BoolQuery builder based on the provided field, from, and to values.
+	 *
+	 * @param boolQueryBuilder The BoolQuery builder to add the range query to.
+	 * @param field The field to apply the range query on.
+	 * @param from The lower bound of the range.
+	 * @param to The upper bound of the range.
+	 */
+	 private void addRangeQuery(BoolQuery.Builder boolQueryBuilder, String field, Object from, Object to) {
+	        if (from != null) {
+	            boolQueryBuilder.must(RangeQuery.of(r -> r.field(field).gte(JsonData.of(from)))._toQuery());
+	        }
+	        if (to != null) {
+	            boolQueryBuilder.must(RangeQuery.of(r -> r.field(field).lte(JsonData.of(to)))._toQuery());
+	        }
+	    }
 
-            /*********************************************************************************************************************/
-
-            // Create aggregation based on getsetAttr with .keyword field
-            Aggregation aggregation = Aggregation.of(a -> a
-                    .terms(t -> t.field(getsetAttr + ".keyword").size(10)));
-
-            Query query = NativeQuery.builder()
-                    .withQuery(boolQueryBuilder.build()._toQuery())
-                    .withAggregation("agg", aggregation)
-                    .build();
-
-            SearchHits<LogEntry> searchHits = elasticsearchOperations.search(query, LogEntry.class);
-
-            // // Process aggregation results
-            // Aggregations aggregations = searchHits.getAggregations();
-            // if (aggregations != null && aggregations.get(getsetAttr) != null) {
-            // // Process the aggregation results as needed
-            // }
-
-            List<LogEntry> loggerList = searchHits.getSearchHits()
-                    .stream()
-                    .map(SearchHit::getContent)
-                    .toList();
-            return loggerList;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return null;
-
-    }
 
     // // Pattern for attribute validation
     // private static final Pattern PATTERN = Pattern.compile("^[a-z]{1,9}$");

@@ -1,8 +1,7 @@
 package com.remiges.logharbour.controller;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +9,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,15 +18,14 @@ import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
-import com.remiges.logharbour.model.LogEntry.Status;
 import com.remiges.logharbour.model.request.LoggerRequest;
 import com.remiges.logharbour.model.request.LogharbourRequestBo;
 import com.remiges.logharbour.model.request.LoginUser;
 import com.remiges.logharbour.model.response.GetLogsResponse;
+import com.remiges.logharbour.model.response.ResponseBO;
 import com.remiges.logharbour.service.LHLoggerTestService;
 import com.remiges.logharbour.util.LHLogger;
 import com.remiges.logharbour.util.Logharbour;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 public class LHLoggerController {
@@ -101,12 +100,13 @@ public class LHLoggerController {
 	 * @return A map containing the set values and an error, if any.
 	 * @throws Exception
 	 */
-	@PostMapping("/getlogs")
-	public List<LogEntry> getSet(@RequestParam(required = true) String queryToken,
+
+@PostMapping("/getlogs")
+	public ResponseBO<Map<String, Long>> getSet(@RequestParam(required = true) String queryToken,
 			@RequestParam(required = false) String app, @RequestParam(required = false) String type,
 			@RequestParam(required = false) String who, @RequestParam(required = false) String clazz,
 			@RequestParam(required = false) String instance, @RequestParam(required = false) String op,
-			@RequestParam(required = false) LocalDateTime fromts, @RequestParam(required = false) LocalDateTime tots,
+			@RequestParam(required = false) String fromts, @RequestParam(required = false) String tots,
 			@RequestParam(required = false) Integer ndays, @RequestParam(required = false) String remoteIP,
 			@RequestParam(required = false) LogPri_t pri, @RequestParam(required = false) String setattr)
 			throws Exception {
@@ -118,7 +118,7 @@ public class LHLoggerController {
 	}
 
 	public static LogharbourRequestBo convertRequestParamToRequestForm(String querytoken, String app, String type,
-			String who, String clazz, String instance, String op, LocalDateTime fromts, LocalDateTime tots,
+			String who, String clazz, String instance, String op, String fromts, String tots,
 			Integer ndays, String remoteIP, LogPri_t pri, String setattr) {
 		return new LogharbourRequestBo(querytoken, app, type, who, clazz, instance, op, fromts, tots, ndays, remoteIP,
 				setattr);
@@ -128,6 +128,7 @@ public class LHLoggerController {
 		// Define the enum constants based on your use case
 		LOW, MEDIUM, HIGH
 	}
+
 
 	@GetMapping("/change-logs")
 	public List<LogEntry> getChangeLogs(

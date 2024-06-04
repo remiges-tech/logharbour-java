@@ -17,8 +17,8 @@ public class LogharbourRequestBo {
     private String className;
     private String instance;
     private String op;
-    private LocalDateTime fromTs;
-    private LocalDateTime toTs;
+    private String fromTs;
+    private String toTs;
     private Integer nDays;
     private String remoteIP;
     private String setAttr;
