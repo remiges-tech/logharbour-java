@@ -8,19 +8,21 @@ import lombok.Data;
 @Data
 public class LoggerRequest {
 
-    private String userId;
-    private String userName;
-    private String password;
-    private String logSource;
-    private String logCategory;
+    private String id;
+    private String mobile;
+    private String name;
+    private String app;
+    private String system;
     private String module;
     private LogPriority logPriority;
-    private String user;
-    private String action;
-    private String loggerClassName;
+    private String who;
+    private String op;
+    private String clazz;
     private String instanceId;
     private Status status;
     private String additionalInfo;
-    private String ipAddress;
+    private String remoteIP;
     private String message;
+    private String error;
+
 }

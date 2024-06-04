@@ -147,9 +147,9 @@ public class LHLoggerController {
 	}
 
 	@PostMapping("/activity-log")
-	public String postActivityLogs() throws Exception {
+	public String postActivityLogs(@RequestBody LoggerRequest loggerRequest) throws Exception {
 
-		LoginUser loginUser = new LoginUser("3", "Shivendra", "2121");
+		LoginUser loginUser = new LoginUser(loggerRequest.getId(), loggerRequest.getName(), loggerRequest.getMobile());
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
@@ -157,13 +157,14 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.DEBUG0, "User2",
-				"Insert", LHLogger.class.getName().toString(), "Instance Id", Status.SUCCESS, "", "127.1.2.1");
+		lhLogger.setLogDetails(loggerRequest.getApp(), loggerRequest.getSystem(), loggerRequest.getModule(),
+				loggerRequest.getLogPriority(), loggerRequest.getWho(),
+				loggerRequest.getOp(), loggerRequest.getClazz(), loggerRequest.getInstanceId(),
+				loggerRequest.getStatus(), loggerRequest.getError(), loggerRequest.getRemoteIP());
 
 		lhLogger.logActivity("Log Activitiy Test", loginUser);
 
 		return "Activity Data log posted Successfully";
-
 	}
 
 	@PostMapping("/changes-log")
@@ -196,7 +197,7 @@ public class LHLoggerController {
 	@PostMapping("/debug-log")
 	public String postDebugLogs(@RequestBody LoggerRequest request) throws Exception {
 
-		LoginUser loginUser = new LoginUser(request.getUserId(), request.getUserName(), request.getPassword());
+		LoginUser loginUser = new LoginUser(request.getId(), request.getName(), request.getMobile());
 
 		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
@@ -204,10 +205,10 @@ public class LHLoggerController {
 				logharbour.getLoggerContext(request.getLogPriority()), logharbour.getKafkaTopic(),
 				new ObjectMapper());
 
-		lhLogger.setLogDetails(request.getLogSource(), request.getLogCategory(), request.getModule(),
-				request.getLogPriority(), request.getUser(), request.getAction(),
-				request.getLoggerClassName(), request.getInstanceId(), request.getStatus(),
-				request.getAdditionalInfo(), request.getIpAddress());
+		lhLogger.setLogDetails(request.getApp(), request.getSystem(), request.getModule(),
+				request.getLogPriority(), request.getWho(), request.getOp(),
+				request.getClazz(), request.getInstanceId(), request.getStatus(),
+				request.getAdditionalInfo(), request.getRemoteIP());
 
 		lhLogger.logDebug(request.getMessage(), loginUser);
 		return "Debug Data log posted Successfully";
