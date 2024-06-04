@@ -1,4 +1,4 @@
-package com.remiges.logharbour.model;
+package com.remiges.logharbour.model.request;
 
 import java.time.LocalDateTime;
 

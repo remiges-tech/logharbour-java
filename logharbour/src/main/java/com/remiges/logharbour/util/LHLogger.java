@@ -3,9 +3,7 @@ package com.remiges.logharbour.util;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -21,22 +19,21 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.remiges.logharbour.config.Constants;
 import com.remiges.logharbour.constant.LogharbourConstants;
-import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.exception.LogException;
 import com.remiges.logharbour.exception.LogQueryException;
 import com.remiges.logharbour.model.ChangeInfo;
 import com.remiges.logharbour.model.DebugInfo;
-import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogData;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.LogType;
 import com.remiges.logharbour.model.LogEntry.Status;
-import com.remiges.logharbour.model.LoggerContext;
-import com.remiges.logharbour.model.LogharbourRequestBo;
-import com.remiges.logharbour.repository.LogEntryRepository;
+import com.remiges.logharbour.model.request.LogharbourRequestBo;
+import com.remiges.logharbour.model.response.GetLogsResponse;
 import com.remiges.logharbour.service.ElasticQueryServices;
+import com.remiges.logharbour.service.LoggerContext;
 
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
@@ -49,7 +46,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class LHLogger implements Cloneable {
+public class LHLogger {
 
     private String app;
     private String system;
@@ -73,20 +70,18 @@ public class LHLogger implements Cloneable {
     private ElasticQueryServices elasticQueryServices;
 
     @Autowired
-    private LogEntryRepository logEntryRepository;
-
-    // cloning method
-    @Override
-    public LHLogger clone() {
-        try {
-            return (LHLogger) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new RuntimeException("Cloning not supported for LogEntry", e);
-        }
-    }
+    private Constants constants;
 
     /**
-     * Default constructor that initializes the writer for the log file.
+     * Constructs an instance of LHLogger with the specified parameters.
+     *
+     * @param kafkaTemplate     the KafkaTemplate used for sending messages to Kafka
+     * @param printWriter       the PrintWriter used for writing log messages
+     * @param logHarbourContext the LoggerContext used for managing log
+     *                          configurations
+     * @param topic             the Kafka topic to which messages will be sent
+     * @param objectMapper      the ObjectMapper used for JSON serialization and
+     *                          deserialization
      */
     public LHLogger(KafkaTemplate<String, String> kafkaTemplate, PrintWriter printWriter,
             LoggerContext logHarbourContext, String topic, ObjectMapper objectMapper) {
@@ -135,38 +130,42 @@ public class LHLogger implements Cloneable {
 
     }
 
-    public LogEntry newLogEntry(String message, LogData data) {
-        return new LogEntry(app, system, module, pri, who, op, Instant.now(), clazz, instanceId, status, error,
-                remoteIP, message, data);
-    }
-
     /**
-     * Logs a message by pushing it to Kafka. If Kafka is unavailable, logs to a
-     * file.
+     * Logs a message to both the local log file and a Kafka topic, depending on the
+     * specified priority.
      *
-     * @param logMessage The log message to be logged.
+     * This method writes the provided log message to a local log file using a
+     * PrintWriter and also sends
+     * the log message to a Kafka topic if the logging priority meets the criteria.
+     * If an error occurs
+     * while writing to the log file or sending the message to Kafka, a LogException
+     * is thrown.
+     *
+     * @param logMessage the log message to be written and potentially sent to Kafka
+     * @param priority   the priority of the log message, used to determine if it
+     *                   should be sent to Kafka
+     * @throws LogException if an error occurs while writing to the log file or
+     *                      sending the message to Kafka
      */
-
     private void log(String logMessage, LogPriority priority) throws LogException {
         try {
-            // Write log message to file
+
             writer.println(logMessage);
             writer.flush();
 
-            // Check for errors in the writer
             if (writer.checkError()) {
                 throw new LogException("Error occurred while writing to the log file.");
             }
+
         } catch (Exception e) {
             throw new LogException("Failed to write log message to file", e);
         }
 
-        // Send to Kafka if the priority check passes
         if (shouldLog(priority)) {
             try {
-                this.kafkaTemplate.send(topic, logMessage).get(); // Ensure the message is sent
+                this.kafkaTemplate.send(topic, logMessage).get();
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restore interrupted state
+                Thread.currentThread().interrupt();
                 throw new LogException("Thread was interrupted while sending log message to Kafka", e);
             } catch (ExecutionException e) {
                 throw new LogException("Failed to send log message to Kafka", e.getCause());
@@ -179,35 +178,25 @@ public class LHLogger implements Cloneable {
     }
 
     /**
-     * Checks if a message with the given priority should be logged based on the
-     * minimum log priority set in the logger context.
+     * Logs an activity message with optional data.
      *
-     * @param priority The priority of the log message.
-     * @return True if the message should be logged, false otherwise.
+     * This method creates a log entry with the given message and optional data.
+     * If data is provided, it is converted to a string and included in the log
+     * entry.
+     * The log entry is then serialized to JSON and logged if it meets the logging
+     * criteria.
+     *
+     * @param message the activity message to log
+     * @param data    the additional data to log (can be null)
+     * @throws JsonProcessingException if an error occurs during JSON serialization
+     * @throws LogException            if an error occurs during logging
      */
-    public boolean shouldLog(LogPriority priority) {
-        synchronized (loggerContext) {
-            return priority.ordinal() >= loggerContext.getMinLogPriority().ordinal();
-        }
-    }
-
-    /**
-     * Logs an activity event with data.
-     * 
-     * @param message The log message.
-     * @param data    The data associated with the activity.
-     * @throws JsonProcessingException if an error occurs while processing the log
-     *                                 entry.
-     * @throws LogException
-     */
-
     public void logActivity(String message, Object data) throws LogException {
         LogData logData = null;
         LogEntry entry;
 
         try {
             if (data != null) {
-                // Convert the data to a JSON string
                 String activityData = convertToString(data);
                 logData = new LogData();
                 logData.setActivityData(activityData);
@@ -238,10 +227,8 @@ public class LHLogger implements Cloneable {
      *                                 entry.
      * @throws LogException
      */
-
     public void logDataChange(String message, ChangeInfo data) throws LogException {
         try {
-            // Process changes and convert values to string
             data.getChanges().forEach(change -> {
                 change.setOldValue(convertToString(change.getOldValue()));
                 change.setNewValue(convertToString(change.getNewValue()));
@@ -252,8 +239,6 @@ public class LHLogger implements Cloneable {
 
             LogEntry entry = newLogEntry(message, logData);
             entry.setLogType(LogEntry.LogType.CHANGE);
-
-            // Serialize log entry to JSON string
             String logMessage = objectMapper.writeValueAsString(entry);
             log(logMessage, entry.getPri());
         } catch (JsonProcessingException e) {
@@ -266,37 +251,36 @@ public class LHLogger implements Cloneable {
     }
 
     /**
-     * Logs a debug event with data.
+     * Logs a debug message with additional debug information if the logger is in
+     * debug mode.
      *
-     * @param message The log message.
-     * @param data    The debug data.
-     * @throws JsonProcessingException if an error occurs while processing the log
-     *                                 entry.
+     * This method constructs a LogEntry with detailed debug information including
+     * the process ID,
+     * Java runtime version, the data provided, and the caller's stack trace
+     * information. If the logger
+     * is in debug mode, it serializes this LogEntry to JSON and logs it using the
+     * `log` method.
+     *
+     * @param message the debug message to log
+     * @param data    additional data to include in the debug information
+     * @throws LogException if an error occurs during logging or JSON processing
      */
-
     public void logDebug(String message, Object data) throws LogException {
         try {
             if (loggerContext.isDebugMode()) {
+
                 LogEntry entry;
                 DebugInfo debugInfo = new DebugInfo();
                 debugInfo.setPid(getPid());
                 debugInfo.setRuntime(System.getProperty("java.version"));
-                debugInfo.setData(data.toString()); // Convert the entire data to a JSON string
+                debugInfo.setData(data.toString());
 
-                // Retrieve the current thread's stack trace elements.
                 StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-                /**
-                 * Check if the stack trace has more than two elements.
-                 * The first two elements typically represent `getStackTrace` and `getThread`
-                 * calls,
-                 * so the third element (index 2) will be the actual caller of this method.
-                 */
                 if (stackTrace.length > 2) {
                     StackTraceElement caller = stackTrace[2];
                     debugInfo.setFileName(caller.getFileName());
                     debugInfo.setLineNumber(caller.getLineNumber());
                     debugInfo.setFunctionName(caller.getMethodName());
-                    // debugInfo.setStackTrace(getStackTraceAsString(stackTrace));
                     debugInfo.setStackTrace(" ");
                 }
 
@@ -313,6 +297,32 @@ public class LHLogger implements Cloneable {
             throw new LogException("Failed to log debug data", e);
         } catch (Exception e) {
             throw new LogException("Unexpected error occurred while logging debug data", e);
+        }
+    }
+
+    /**
+     * Creates a new LogEntry with the specified message and log data.
+     *
+     * @param message the log message
+     * @param data    the log data containing additional information (can be null)
+     * @return a new instance of LogEntry initialized with the current context and
+     *         the provided message and data
+     */
+    public LogEntry newLogEntry(String message, LogData data) {
+        return new LogEntry(app, system, module, pri, who, op, Instant.now(), clazz, instanceId, status, error,
+                remoteIP, message, data);
+    }
+
+    /**
+     * Checks if a message with the given priority should be logged based on the
+     * minimum log priority set in the logger context.
+     *
+     * @param priority The priority of the log message.
+     * @return True if the message should be logged, false otherwise.
+     */
+    public boolean shouldLog(LogPriority priority) {
+        synchronized (loggerContext) {
+            return priority.ordinal() >= loggerContext.getMinLogPriority().ordinal();
         }
     }
 
@@ -351,83 +361,26 @@ public class LHLogger implements Cloneable {
     }
 
     /**
-     * Retrieves the list of log entries based on specified parameters.
+     * Retrieves a list of change logs based on the specified query parameters.
      *
-     * @param querytoken The query token.
-     * @param app        The application name.
-     * @param who        The user identifier.
-     * @param className  The class name.
-     * @param instance   The instance identifier.
-     * @param field      The field to filter by.
-     * @param fromtsStr  The start timestamp in string format.
-     * @param totsStr    The end timestamp in string format.
-     * @param ndays      The number of days for fetching logs.
-     * @return The list of log entries.
-     * @throws Exception If an error occurs during processing.
+     * This method queries the Elasticsearch service for change logs that match the
+     * given parameters.
+     * The results are returned as a list of LogEntry objects.
+     *
+     * @param queryToken the token used for the query
+     * @param app        the application name
+     * @param className  the class name
+     * @param instance   the instance ID
+     * @param who        the user or service performing the operation
+     * @param op         the operation being performed
+     * @param fromtsStr  the start timestamp for the query (inclusive)
+     * @param totsStr    the end timestamp for the query (inclusive)
+     * @param ndays      the number of days for the query period
+     * @param field      the specific field to query
+     * @param remoteIP   the remote IP address
+     * @return a list of LogEntry objects that match the query parameters
+     * @throws LogQueryException if an error occurs while fetching the change logs
      */
-
-    public List<LogEntry> getChanges(String queryToken, String app, String who, String className, String instance,
-            String field, String fromtsStr, String totsStr, int ndays) throws Exception {
-
-        Instant fromts = null;
-        Instant tots = null;
-
-        try {
-            fromts = (fromtsStr != null && !fromtsStr.isEmpty()) ? Instant.parse(fromtsStr) : null;
-            tots = (totsStr != null && !totsStr.isEmpty()) ? Instant.parse(totsStr) : null;
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "Invalid timestamp format. Please provide timestamps in ISO 8601 format.");
-        }
-
-        if (fromts != null && tots != null && fromts.isAfter(tots)) {
-            throw new InvalidTimestampRangeException("fromts must be before tots");
-        }
-
-        List<LogEntry> logs = new ArrayList<>();
-        LogEntry.LogType logType = LogEntry.LogType.CHANGE;
-
-        if (fromts != null && tots != null) {
-            logs = logEntryRepository.findLogEntries(app, className, instance, who, fromts.toString(), tots.toString());
-        } else if (fromts != null) {
-            logs = logEntryRepository.findLogEntries(app, className, instance, who, fromts.toString(),
-                    Instant.now().toString());
-        } else if (tots != null) {
-            logs = logEntryRepository.findLogEntries(app, className, instance, who, Instant.EPOCH.toString(),
-                    tots.toString());
-        } else if (ndays > 0) {
-            Instant end = Instant.now();
-            Instant start = end.minusSeconds(ndays * 86400L);
-            logs = logEntryRepository.findLogEntries(app, className, instance, who, start.toString(), end.toString());
-        } else {
-            logs = logEntryRepository.findByAppAndClassNameAndInstanceIdAndLogType(app, className, instance, logType);
-        }
-
-        if (field != null && !field.isEmpty()) {
-            logs = logs.stream()
-                    .filter(log -> {
-                        Object data = log.getData();
-                        return data instanceof Map && ((Map<?, ?>) data).containsKey(field);
-                    })
-                    .collect(Collectors.toList());
-        }
-
-        return logs;
-    }
-
-    // public List<LogEntry> getChangesLog(String queryToken, String app,
-    // String className, String instance, String who,
-    // String op, String fromtsStr, String totsStr, int ndays, String field,
-    // String remoteIP) throws Exception {
-
-    // SearchHits<LogEntry> search =
-    // elasticQueryServices.getQueryForChangeLogs(queryToken, app, className,
-    // instance,
-    // who,
-    // op, fromtsStr, totsStr, ndays, field, remoteIP);
-
-    // return search.getSearchHits().stream().map(SearchHit::getContent).toList();
-    // }
     public List<LogEntry> getChangesLog(String queryToken, String app, String className, String instance, String who,
             String op, String fromtsStr, String totsStr, int ndays, String field,
             String remoteIP) {
@@ -441,6 +394,7 @@ public class LHLogger implements Cloneable {
             return searchHits.getSearchHits().stream()
                     .map(SearchHit::getContent)
                     .collect(Collectors.toList());
+
         } catch (Exception e) {
             throw new LogQueryException("Error occurred while fetching change logs", e);
         }
@@ -478,9 +432,6 @@ public class LHLogger implements Cloneable {
      *         information.
      * @throws Exception If an error occurs during log retrieval or processing.
      */
-
-    private static final int LOGHARBOUR_GETLOGS_MAXREC = 5;
-
     public GetLogsResponse getLogs(String queryToken, String app, String who,
             String className, String instance,
             String op, String fromtsStr, String totsStr, int ndays, String logType,
@@ -495,8 +446,8 @@ public class LHLogger implements Cloneable {
         long totalHits = search.getTotalHits();
 
         List<LogEntry> logEntries = search.getSearchHits().stream().map(SearchHit::getContent)
-                .limit(LOGHARBOUR_GETLOGS_MAXREC).toList();
-        if (LOGHARBOUR_GETLOGS_MAXREC <= totalHits) {
+                .limit(constants.getLogharbourMaxRecord()).toList();
+        if (constants.getLogharbourMaxRecord() <= totalHits) {
             getLogsResponse.setLogs(logEntries);
             getLogsResponse.setNrec(totalHits);
             return getLogsResponse;

@@ -27,4 +27,7 @@ public class Constants {
     @Value("${elasticsearch.scheme}")
     private String elasticsearchScheme;
 
+    @Value("${logharbour.max.record}")
+    private Integer logharbourMaxRecord;
+
 }

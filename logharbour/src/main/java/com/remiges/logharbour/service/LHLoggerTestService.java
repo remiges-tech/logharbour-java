@@ -8,7 +8,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.remiges.logharbour.model.LogEntry.LogPriority;
-import com.remiges.logharbour.model.LoggerContext;
 import com.remiges.logharbour.util.Logharbour;
 
 @Service

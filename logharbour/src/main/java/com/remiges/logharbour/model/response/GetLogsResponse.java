@@ -1,6 +1,8 @@
-package com.remiges.logharbour.model;
+package com.remiges.logharbour.model.response;
 
 import java.util.List;
+
+import com.remiges.logharbour.model.LogEntry;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

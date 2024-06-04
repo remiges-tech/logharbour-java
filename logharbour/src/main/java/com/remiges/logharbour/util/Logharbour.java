@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import com.remiges.logharbour.model.LogEntry.LogPriority;
-import com.remiges.logharbour.model.LoggerContext;
+import com.remiges.logharbour.service.LoggerContext;
 
 /**
  * Interface for Logharbour, providing methods to interact with Kafka,

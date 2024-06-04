@@ -1,6 +1,8 @@
-package com.remiges.logharbour.model;
+package com.remiges.logharbour.service;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.remiges.logharbour.model.LogEntry;
 
 import lombok.Data;
 

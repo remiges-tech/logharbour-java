@@ -1,4 +1,4 @@
-package com.remiges.logharbour.model;
+package com.remiges.logharbour.model.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

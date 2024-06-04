@@ -1,6 +1,5 @@
 package com.remiges.logharbour.controller;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,12 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.ChangeInfo;
-import com.remiges.logharbour.model.GetLogsResponse;
 import com.remiges.logharbour.model.LogEntry;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.Status;
-import com.remiges.logharbour.model.LogharbourRequestBo;
-import com.remiges.logharbour.model.LoginUser;
+import com.remiges.logharbour.model.request.LogharbourRequestBo;
+import com.remiges.logharbour.model.request.LoginUser;
+import com.remiges.logharbour.model.response.GetLogsResponse;
 import com.remiges.logharbour.service.LHLoggerTestService;
 import com.remiges.logharbour.util.LHLogger;
 import com.remiges.logharbour.util.Logharbour;
@@ -34,25 +33,6 @@ public class LHLoggerController {
 
 	@Autowired
 	private KafkaTemplate<String, String> kafkaTemplate;
-
-	// get change controller
-	@GetMapping("/data-changes")
-	public List<LogEntry> getChanges(
-			@RequestParam String queryToken,
-			@RequestParam String app,
-			@RequestParam(required = false) String who,
-			@RequestParam String className,
-			@RequestParam String instance,
-			@RequestParam(required = false) String field,
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
-			@RequestParam(required = false, defaultValue = "0") int ndays) throws Exception {
-		try {
-			return logHarbour.getChanges(queryToken, app, who, className, instance, field, fromts, tots, ndays);
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to retrieve log entries", e);
-		}
-	}
 
 	@GetMapping("/data-logs")
 	public GetLogsResponse getLogs(
@@ -71,7 +51,6 @@ public class LHLoggerController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String searchAfterTS,
 			@RequestParam(required = false) String searchAfterDocID) throws Exception {
 
-		// Call the service method to get the changes and return the response
 		return logHarbour.getLogs(queryToken, app, who, className, instance, op, fromts, tots, ndays, logType, remoteIP,
 				pri, searchAfterTS, searchAfterDocID);
 	}
@@ -147,6 +126,24 @@ public class LHLoggerController {
 		LOW, MEDIUM, HIGH
 	}
 
+	@GetMapping("/change-logs")
+	public List<LogEntry> getChangeLogs(
+			@RequestParam(required = true) String queryToken,
+			@RequestParam(required = true) String app,
+			@RequestParam(required = true) String className,
+			@RequestParam(required = true) String instance,
+			@RequestParam(required = false) String who,
+			@RequestParam(required = false) String op,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
+			@RequestParam(required = false, defaultValue = "0") int ndays,
+			@RequestParam(required = false) String field,
+			@RequestParam(required = false) String remoteIP) {
+
+		return logHarbour.getChangesLog(queryToken, app, className, instance, who, op, fromts, tots, ndays, field,
+				remoteIP);
+	}
+
 	@PostMapping("/activity-log")
 	public String postActivityLogs() throws Exception {
 
@@ -210,25 +207,6 @@ public class LHLoggerController {
 
 		lhLogger.logDebug("Log Activitiy Test", loginUser);
 		return "Debug Data log posted Successfully";
-	}
-
-	@GetMapping("/change-logs")
-	public List<LogEntry> getChangeLogs(
-			@RequestParam(required = true) String queryToken,
-			@RequestParam(required = true) String app,
-			@RequestParam(required = true) String className,
-			@RequestParam(required = true) String instance,
-			@RequestParam(required = false) String who,
-			@RequestParam(required = false) String op,
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String fromts,
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String tots,
-			@RequestParam(required = false, defaultValue = "0") int ndays,
-			@RequestParam(required = false) String field,
-			@RequestParam(required = false) String remoteIP) throws Exception {
-
-		// Call the service method to get the changes and return the response
-		return logHarbour.getChangesLog(queryToken, app, className, instance, who, op, fromts, tots, ndays, field,
-				remoteIP);
 	}
 
 }
