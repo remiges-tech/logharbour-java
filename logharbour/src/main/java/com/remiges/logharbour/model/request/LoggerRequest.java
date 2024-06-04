@@ -1,5 +1,8 @@
 package com.remiges.logharbour.model.request;
 
+import java.util.List;
+
+import com.remiges.logharbour.model.ChangeDetails;
 import com.remiges.logharbour.model.LogEntry.LogPriority;
 import com.remiges.logharbour.model.LogEntry.Status;
 
@@ -24,5 +27,6 @@ public class LoggerRequest {
     private String remoteIP;
     private String message;
     private String error;
+    private List<ChangeDetails> changes;
 
 }

@@ -3,6 +3,7 @@ package com.remiges.logharbour.controller;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -168,31 +169,38 @@ public class LHLoggerController {
 	}
 
 	@PostMapping("/changes-log")
-	public String postChangeLogs() throws Exception {
+public String postChangeLogs(@RequestBody LoggerRequest changeLogRequest) throws Exception {
 
-		LoginUser loginUser = new LoginUser("4", "Shivendra", "2121");
+    // Create the LoginUser object from request data
+    LoginUser loginUser = new LoginUser(changeLogRequest.getId(), changeLogRequest.getName(), changeLogRequest.getMobile());
 
-		ChangeInfo changeInfo = new ChangeInfo();
-		changeInfo.setEntity(loginUser.getName());
-		changeInfo.setOp("name");
+    // Create the ChangeInfo object and set its properties from the request
+    ChangeInfo changeInfo = new ChangeInfo();
+    changeInfo.setEntity(changeLogRequest.getName());
+    changeInfo.setOp(changeLogRequest.getOp());
+    // Map the list of changes from the request to ChangeDetails objects
+    List<ChangeDetails> changeDetailsList = changeLogRequest.getChanges().stream()
+            .map(change -> new ChangeDetails(change.getField(), change.getOldValue(), change.getNewValue()))
+            .collect(Collectors.toList());
+    changeInfo.setChanges(changeDetailsList);
 
-		List<ChangeDetails> changeDetails = new ArrayList<>();
-		changeDetails.add(new ChangeDetails("id", loginUser.getId(), "34"));
-		changeInfo.setChanges(changeDetails);
+    // Initialize Logharbour and LHLogger
+    Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
-		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
+    LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
+            logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
+            new ObjectMapper());
 
-		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
-				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
-				new ObjectMapper());
+    // Set log details using request data
+    lhLogger.setLogDetails(changeLogRequest.getApp(), changeLogRequest.getSystem(), changeLogRequest.getModule(),
+            changeLogRequest.getLogPriority(), changeLogRequest.getWho(),
+            changeLogRequest.getOp(), changeLogRequest.getClazz(), changeLogRequest.getInstanceId(),
+            changeLogRequest.getStatus(), changeLogRequest.getError(), changeLogRequest.getRemoteIP());
 
-		lhLogger.setLogDetails("Kra", "Linux System", "Adhaar Kyc Module", LogPriority.SEC, "User7",
-				"Update", LHLogger.class.getName().toString(), "instance3", Status.SUCCESS, "",
-				"127.0.0");
-
-		lhLogger.logDataChange("Log Data change", changeInfo);
-		return "Change Data log posted Successfully";
-	}
+    // Log the change data
+    lhLogger.logDataChange("Log Data change", changeInfo);
+    return "Change Data log posted Successfully";
+}
 
 	@PostMapping("/debug-log")
 	public String postDebugLogs(@RequestBody LoggerRequest request) throws Exception {
