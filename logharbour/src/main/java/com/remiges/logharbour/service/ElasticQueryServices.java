@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -29,26 +31,33 @@ public class ElasticQueryServices {
 
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
-    
+
     /**
-     * Retrieves log entries from Elasticsearch based on the provided query parameters.
+     * Retrieves log entries from Elasticsearch based on the provided query
+     * parameters.
      *
-     * @param queryToken      The query token for authentication or identification.
-     * @param app             The application name to filter logs.
-     * @param who             The user identifier to filter logs.
-     * @param className       The class name to filter logs.
-     * @param instance        The instance identifier to filter logs.
-     * @param op              The operation type to filter logs.
-     * @param fromtsStr       The start timestamp for the time range filter.
-     * @param totsStr         The end timestamp for the time range filter.
-     * @param ndays           The number of days to filter logs from the current time.
-     * @param logType         The log type (e.g., "A" for activity, "C" for change).
-     * @param remoteIP        The remote IP address to filter logs.
-     * @param pri             The log priority to filter logs.
-     * @param searchAfterTs   The timestamp for pagination to fetch logs after the specified time.
-     * @param searchAfterDocId The document ID for pagination to fetch logs after the specified document.
-     * @return A {@link SearchHits} object containing the search results for log entries.
-     * @throws IllegalArgumentException If the end timestamp is before the start timestamp.
+     * @param queryToken       The query token for authentication or identification.
+     * @param app              The application name to filter logs.
+     * @param who              The user identifier to filter logs.
+     * @param className        The class name to filter logs.
+     * @param instance         The instance identifier to filter logs.
+     * @param op               The operation type to filter logs.
+     * @param fromtsStr        The start timestamp for the time range filter.
+     * @param totsStr          The end timestamp for the time range filter.
+     * @param ndays            The number of days to filter logs from the current
+     *                         time.
+     * @param logType          The log type (e.g., "A" for activity, "C" for
+     *                         change).
+     * @param remoteIP         The remote IP address to filter logs.
+     * @param pri              The log priority to filter logs.
+     * @param searchAfterTs    The timestamp for pagination to fetch logs after the
+     *                         specified time.
+     * @param searchAfterDocId The document ID for pagination to fetch logs after
+     *                         the specified document.
+     * @return A {@link SearchHits} object containing the search results for log
+     *         entries.
+     * @throws IllegalArgumentException If the end timestamp is before the start
+     *                                  timestamp.
      */
     public SearchHits<LogEntry> getQueryForLogs(String queryToken, String app, String who,
             String className, String instance,
@@ -60,43 +69,81 @@ public class ElasticQueryServices {
 
         BoolQuery.Builder boBuilder = new BoolQuery.Builder();
 
-        if (app != null && !app.isEmpty()) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.APP).query(app))._toQuery());
-        }
-        if (who != null && !who.isEmpty()) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.WHO).query(who))._toQuery());
-        }
-        if (className != null && !className.isEmpty()) {
-            boBuilder.must(
-                    MatchPhraseQuery.of(m -> m.field(LogharbourConstants.CLASS_NAME).query(className))._toQuery());
-        }
-        if (instance != null && !instance.isEmpty()) {
-            boBuilder.must(
-                    MatchPhraseQuery.of(m -> m.field(LogharbourConstants.INSTANCE_ID).query(instance))._toQuery());
-        }
-        if (op != null && !op.isEmpty()) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.OP).query(op))._toQuery());
-        }
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.APP, app);
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.WHO, who);
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.CLASS_NAME, className);
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.INSTANCE_ID, instance);
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.OP, op);
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.REMOTE_IP, remoteIP);
+        addMatchPhraseQuery(boBuilder, LogharbourConstants.PRIORITY, pri.toString());
+        // if (app != null && !app.isEmpty()) {
+        // boBuilder.must(MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.APP).query(app))._toQuery());
+        // }
+        // if (who != null && !who.isEmpty()) {
+        // boBuilder.must(MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.WHO).query(who))._toQuery());
+        // }
+        // if (className != null && !className.isEmpty()) {
+        // boBuilder.must(
+        // MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.CLASS_NAME).query(className))._toQuery());
+        // }
+        // if (instance != null && !instance.isEmpty()) {
+        // boBuilder.must(
+        // MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.INSTANCE_ID).query(instance))._toQuery());
+        // }
+        // if (op != null && !op.isEmpty()) {
+        // boBuilder.must(MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.OP).query(op))._toQuery());
+        // }
 
-        if (remoteIP != null && !remoteIP.isEmpty()) {
-            
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.REMOTE_IP).query(remoteIP))._toQuery());
-        }
+        // if (remoteIP != null && !remoteIP.isEmpty()) {
+
+        // boBuilder.must(MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.REMOTE_IP).query(remoteIP))._toQuery());
+        // }
+        // if (logType != null && !logType.isEmpty()) {
+        // if (logType.equals("A")) {
+
+        // boBuilder.must(
+        // MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.LOG_TYPE).query("ACTIVITY"))._toQuery());
+        // } else if (logType.equals("C")) {
+        // boBuilder.must(
+        // MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
+        // } else if (logType.equals("D")) {
+        // boBuilder.must(
+        // MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.LOG_TYPE).query("DEBUG"))._toQuery());
+
+        // }
+        // }
+
+        // Define a map of logType to their corresponding log type string
+        Map<String, String> logTypeMap = new HashMap<>();
+        logTypeMap.put("A", "ACTIVITY");
+        logTypeMap.put("C", "CHANGE");
+        logTypeMap.put("D", "DEBUG");
+
+        // Check if logType is not null and not empty
         if (logType != null && !logType.isEmpty()) {
-            if(logType.equals("A")){
+            // Get the corresponding log type string from the map
+            String logTypeString = logTypeMap.get(logType);
 
-                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("ACTIVITY"))._toQuery());
-            }else if (logType.equals("C")) {
-                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
-            }else{
-                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("DEBUG"))._toQuery());
-
+            // If logTypeString is found, add the query
+            if (logTypeString != null) {
+                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query(logTypeString))
+                        ._toQuery());
             }
         }
-        if (pri != null) {
-            boBuilder.must(
-                    MatchPhraseQuery.of(m -> m.field(LogharbourConstants.PRIORITY).query(pri.toString()))._toQuery());
-        }
+        // if (pri != null) {
+        // boBuilder.must(
+        // MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.PRIORITY).query(pri.toString()))._toQuery());
+        // }
 
         DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
         LocalDateTime fromts = fromtsStr != null && !fromtsStr.isEmpty() ? LocalDateTime.parse(fromtsStr, formatter)
@@ -131,7 +178,6 @@ public class ElasticQueryServices {
                             .lte(JsonData.of(end.toString())))
                     ._toQuery());
         }
-
 
         if (searchAfterTs != null && !searchAfterTs.isEmpty()) {
 

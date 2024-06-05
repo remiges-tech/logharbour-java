@@ -13,10 +13,9 @@ import com.remiges.logharbour.util.Logharbour;
 @Service
 public class LHLoggerTestService implements Logharbour {
 
-   
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    public LHLoggerTestService(KafkaTemplate<String, String> kafkaTemplate){
+    public LHLoggerTestService(KafkaTemplate<String, String> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
