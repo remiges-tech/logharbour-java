@@ -15,10 +15,12 @@ import org.springframework.stereotype.Service;
 import com.remiges.logharbour.constant.LogharbourConstants;
 import com.remiges.logharbour.exception.InvalidTimestampRangeException;
 import com.remiges.logharbour.model.LogEntry;
+import com.remiges.logharbour.model.request.LogharbourRequestBo;
 
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
 import co.elastic.clients.json.JsonData;
 
@@ -147,23 +149,19 @@ public class ElasticQueryServices {
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-        // Mandatory fields
         boolQueryBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.APP).query(app))._toQuery());
         boolQueryBuilder
                 .must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.CLASS_NAME).query(className))._toQuery());
         boolQueryBuilder
                 .must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.INSTANCE_ID).query(instance))._toQuery());
-        // Ensure logType is "CHANGE"
         boolQueryBuilder
                 .must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
 
-        // Optional fields
         addMatchPhraseQuery(boolQueryBuilder, LogharbourConstants.WHO, who);
         addMatchPhraseQuery(boolQueryBuilder, LogharbourConstants.OP, op);
         addMatchPhraseQuery(boolQueryBuilder, LogharbourConstants.REMOTE_IP, remoteIP);
         addMatchPhraseQuery(boolQueryBuilder, "data.changeData.changes.field", field);
 
-        // Handle timestamp ranges
         addTimestampRangeQuery(boolQueryBuilder, fromtsStr, totsStr, ndays);
 
         Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery())
@@ -171,6 +169,58 @@ public class ElasticQueryServices {
 
         return elasticsearchOperations.search(query, LogEntry.class);
 
+    }
+
+    public SearchHits<LogEntry> getQueryForGetSetLogs(LogharbourRequestBo logharbourRequestBo) {
+
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.APP, logharbourRequestBo.getApp());
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.WHO, logharbourRequestBo.getWho());
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.CLASS_NAME, logharbourRequestBo.getClassName());
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.OP, logharbourRequestBo.getOp());
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.REMOTE_IP, logharbourRequestBo.getRemoteIP());
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.INSTANCE_ID, logharbourRequestBo.getInstance());
+        this.appendQuery(boolQueryBuilder, LogharbourConstants.LOG_TYPE, logharbourRequestBo.getType());
+
+        this.addRangeQuery(boolQueryBuilder, LogharbourConstants.WHEN, logharbourRequestBo.getFromTs(),
+                logharbourRequestBo.getToTs());
+
+        Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery()).build();
+        return elasticsearchOperations.search(query, LogEntry.class);
+
+    }
+
+    /**
+     * Appends a query clause to a BoolQuery builder based on the provided field and
+     * value.
+     *
+     * @param boolQueryBuilder The BoolQuery builder to append the query to.
+     * @param field            The field to query.
+     * @param value            The value to match.
+     */
+    private void appendQuery(BoolQuery.Builder boolQueryBuilder, String field, String value) {
+        if (value != null && field != null) {
+            boolQueryBuilder.must(MatchQuery.of(m -> m.field(field).query(value))._toQuery());
+        }
+    }
+
+    /**
+     * Adds a range query clause to a BoolQuery builder based on the provided field,
+     * from, and to values.
+     *
+     * @param boolQueryBuilder The BoolQuery builder to add the range query to.
+     * @param field            The field to apply the range query on.
+     * @param from             The lower bound of the range.
+     * @param to               The upper bound of the range.
+     */
+    private void addRangeQuery(BoolQuery.Builder boolQueryBuilder, String field, Object from, Object to) {
+        if (from != null) {
+            boolQueryBuilder.must(RangeQuery.of(r -> r.field(field).gte(JsonData.of(from)))._toQuery());
+        }
+        if (to != null) {
+            boolQueryBuilder.must(RangeQuery.of(r -> r.field(field).lte(JsonData.of(to)))._toQuery());
+        }
     }
 
     /**

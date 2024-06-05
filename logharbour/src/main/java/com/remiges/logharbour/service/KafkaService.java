@@ -29,9 +29,7 @@ public class KafkaService {
         try {
             LogEntry logEntry = objectMapper.readValue(msg, LogEntry.class);
             System.out.println(" Data receive from Kafka Topic is: " + msg);
-
             logEntryRepository.save(logEntry);
-
             System.out.println("Data saved to Elastic search :" + msg);
         } catch (Exception e) {
             e.printStackTrace();

@@ -101,7 +101,7 @@ public class LHLoggerController {
 	 * @throws Exception
 	 */
 
-@PostMapping("/getlogs")
+	@PostMapping("/getlogs")
 	public ResponseBO<Map<String, Long>> getSet(@RequestParam(required = true) String queryToken,
 			@RequestParam(required = false) String app, @RequestParam(required = false) String type,
 			@RequestParam(required = false) String who, @RequestParam(required = false) String clazz,
@@ -128,7 +128,6 @@ public class LHLoggerController {
 		// Define the enum constants based on your use case
 		LOW, MEDIUM, HIGH
 	}
-
 
 	@GetMapping("/change-logs")
 	public List<LogEntry> getChangeLogs(
@@ -170,38 +169,31 @@ public class LHLoggerController {
 	}
 
 	@PostMapping("/changes-log")
-public String postChangeLogs(@RequestBody LoggerRequest changeLogRequest) throws Exception {
+	public String postChangeLogs(@RequestBody LoggerRequest changeLogRequest) throws Exception {
 
-    // Create the LoginUser object from request data
-    LoginUser loginUser = new LoginUser(changeLogRequest.getId(), changeLogRequest.getName(), changeLogRequest.getMobile());
+		ChangeInfo changeInfo = new ChangeInfo();
+		changeInfo.setEntity(changeLogRequest.getName());
+		changeInfo.setOp(changeLogRequest.getOp());
 
-    // Create the ChangeInfo object and set its properties from the request
-    ChangeInfo changeInfo = new ChangeInfo();
-    changeInfo.setEntity(changeLogRequest.getName());
-    changeInfo.setOp(changeLogRequest.getOp());
-    // Map the list of changes from the request to ChangeDetails objects
-    List<ChangeDetails> changeDetailsList = changeLogRequest.getChanges().stream()
-            .map(change -> new ChangeDetails(change.getField(), change.getOldValue(), change.getNewValue()))
-            .collect(Collectors.toList());
-    changeInfo.setChanges(changeDetailsList);
+		List<ChangeDetails> changeDetailsList = changeLogRequest.getChanges().stream()
+				.map(change -> new ChangeDetails(change.getField(), change.getOldValue(), change.getNewValue()))
+				.collect(Collectors.toList());
+		changeInfo.setChanges(changeDetailsList);
 
-    // Initialize Logharbour and LHLogger
-    Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
+		Logharbour logharbour = new LHLoggerTestService(kafkaTemplate);
 
-    LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
-            logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
-            new ObjectMapper());
+		LHLogger lhLogger = new LHLogger(logharbour.getKafkaConnection(), logharbour.getFileWriter("logharbour.txt"),
+				logharbour.getLoggerContext(LogPriority.INFO), logharbour.getKafkaTopic(),
+				new ObjectMapper());
 
-    // Set log details using request data
-    lhLogger.setLogDetails(changeLogRequest.getApp(), changeLogRequest.getSystem(), changeLogRequest.getModule(),
-            changeLogRequest.getLogPriority(), changeLogRequest.getWho(),
-            changeLogRequest.getOp(), changeLogRequest.getClazz(), changeLogRequest.getInstanceId(),
-            changeLogRequest.getStatus(), changeLogRequest.getError(), changeLogRequest.getRemoteIP());
+		lhLogger.setLogDetails(changeLogRequest.getApp(), changeLogRequest.getSystem(), changeLogRequest.getModule(),
+				changeLogRequest.getLogPriority(), changeLogRequest.getWho(),
+				changeLogRequest.getOp(), changeLogRequest.getClazz(), changeLogRequest.getInstanceId(),
+				changeLogRequest.getStatus(), changeLogRequest.getError(), changeLogRequest.getRemoteIP());
 
-    // Log the change data
-    lhLogger.logDataChange("Log Data change", changeInfo);
-    return "Change Data log posted Successfully";
-}
+		lhLogger.logDataChange("Log Data change", changeInfo);
+		return "Change Data log posted Successfully";
+	}
 
 	@PostMapping("/debug-log")
 	public String postDebugLogs(@RequestBody LoggerRequest request) throws Exception {
