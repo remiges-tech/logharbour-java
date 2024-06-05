@@ -75,35 +75,7 @@ public class ElasticQueryServices {
         addMatchPhraseQuery(boBuilder, LogharbourConstants.INSTANCE_ID, instance);
         addMatchPhraseQuery(boBuilder, LogharbourConstants.OP, op);
         addMatchPhraseQuery(boBuilder, LogharbourConstants.REMOTE_IP, remoteIP);
-        // addMatchPhraseQuery(boBuilder, LogharbourConstants.PRIORITY, pri.toString());
-        // if (app != null && !app.isEmpty()) {
-        // boBuilder.must(MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.APP).query(app))._toQuery());
-        // }
-        // if (who != null && !who.isEmpty()) {
-        // boBuilder.must(MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.WHO).query(who))._toQuery());
-        // }
-        // if (className != null && !className.isEmpty()) {
-        // boBuilder.must(
-        // MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.CLASS_NAME).query(className))._toQuery());
-        // }
-        // if (instance != null && !instance.isEmpty()) {
-        // boBuilder.must(
-        // MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.INSTANCE_ID).query(instance))._toQuery());
-        // }
-        // if (op != null && !op.isEmpty()) {
-        // boBuilder.must(MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.OP).query(op))._toQuery());
-        // }
 
-        // if (remoteIP != null && !remoteIP.isEmpty()) {
-
-        // boBuilder.must(MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.REMOTE_IP).query(remoteIP))._toQuery());
-        // }
         if (logType != null && !logType.isEmpty()) {
             if (logType.equals("A")) {
 
@@ -116,29 +88,10 @@ public class ElasticQueryServices {
                 boBuilder.must(
                         MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("DEBUG"))._toQuery());
 
-            }else{
+            } else {
                 return null;
             }
         }
-
-        // Define a map of logType to their corresponding log type string
-        // Map<String, String> logTypeMap = new HashMap<>();
-        // logTypeMap.put("A", "ACTIVITY");
-        // logTypeMap.put("C", "CHANGE");
-        // logTypeMap.put("D", "DEBUG");
-
-        // // Check if logType is not null and not empty
-        // if (logType != null && !logType.isEmpty()) {
-        // // Get the corresponding log type string from the map
-        // String logTypeString = logTypeMap.get(logType);
-
-        // // If logTypeString is found, add the query
-        // if (logTypeString != null) {
-        // boBuilder.must(MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.LOG_TYPE).query(logTypeString))
-        // ._toQuery());
-        // }
-        // }
 
         if (pri != null) {
             boBuilder.must(
@@ -187,17 +140,16 @@ public class ElasticQueryServices {
 
         }
         if (totsReverse) {
-            Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
-                    .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Desc)))
-                    .build();
-            return elasticsearchOperations.search(query, LogEntry.class);
+            return elasticsearchOperations.search(
+                NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
+                        .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Desc))).build(),
+                LogEntry.class);
 
         }
-        Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
-                .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Asc)))
-                .build();
-
-        return elasticsearchOperations.search(query, LogEntry.class);
+        return elasticsearchOperations.search(
+                NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
+                        .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Asc))).build(),
+                LogEntry.class);
     }
 
     /**
@@ -206,25 +158,19 @@ public class ElasticQueryServices {
      * various criteria such as application, class, instance, and optional filters
      * like user, operation, time range, and specific fields.
      *
-     * @param queryToken       Query token for the realm (currently not used in the
-     *                         query).
-     * @param app              The application name (mandatory).
-     * @param className        The class name of the object (mandatory).
-     * @param instance         The instance ID of the object (mandatory).
-     * @param who              The user who made the changes (optional).
-     * @param op               The operation performed (optional).
-     * @param fromtsStr        Start of the time range (ISO 8601 format, optional).
-     * @param totsStr          End of the time range (ISO 8601 format, optional).
-     * @param ndays            Number of days back from the current time to consider
-     *                         (optional).
-     * @param field            Specific field to filter changes (optional).
-     * @param remoteIP         Remote IP address (optional).
-     * @param pri              Log priority (currently not used in the query).
-     * @param searchAfterTs    Timestamp for pagination (currently not used in the
-     *                         query).
-     * @param searchAfterDocId Document ID for pagination (currently not used in the
-     *                         query).
-     * @return SearchHits object containing the search results.
+     * @param queryToken Query token for the realm (currently not used in the
+     *                   query).
+     * @param app        The application name (mandatory).
+     * @param className  The class name of the object (mandatory).
+     * @param instance   The instance ID of the object (mandatory).
+     * @param who        The user who made the changes (optional).
+     * @param op         The operation performed (optional).
+     * @param fromtsStr  Start of the time range (ISO 8601 format, optional).
+     * @param totsStr    End of the time range (ISO 8601 format, optional).
+     * @param ndays      Number of days back from the current time to consider
+     *                   (optional).
+     * @param field      Specific field to filter changes (optional).
+     * @param remoteIP   Remote IP address (optional).
      * @throws IllegalArgumentException If the provided timestamps are in an invalid
      *                                  format or
      *                                  if fromts is after tots.
@@ -252,10 +198,10 @@ public class ElasticQueryServices {
 
         addTimestampRangeQuery(boolQueryBuilder, fromtsStr, totsStr, ndays);
 
-        Query query = NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery())
-                .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Asc))).build();
-
-        return elasticsearchOperations.search(query, LogEntry.class);
+        return elasticsearchOperations.search(
+                NativeQuery.builder().withQuery(boolQueryBuilder.build()._toQuery())
+                        .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Asc))).build(),
+                LogEntry.class);
 
     }
 

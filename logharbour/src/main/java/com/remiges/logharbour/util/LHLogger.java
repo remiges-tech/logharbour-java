@@ -164,10 +164,8 @@ public class LHLogger {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new LogException("Thread was interrupted while sending log message to Kafka", e);
-            } catch (ExecutionException e) {
-                throw new LogException("Failed to send log message to Kafka", e.getCause());
-            } catch (KafkaException e) {
-                throw new LogException("Kafka error occurred while sending log message", e);
+            } catch (ExecutionException | KafkaException e) {
+                throw new LogException("Failed to send log message to Kafka", e.getCause() != null ? e.getCause() : e);
             } catch (Exception e) {
                 throw new LogException("Unexpected error occurred while sending log message to Kafka", e);
             }
