@@ -433,25 +433,30 @@ public class LHLogger {
             String className, String instance,
             String op, String fromtsStr, String totsStr, int ndays, String logType,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
-            String searchAfterDocId) throws Exception {
+            String searchAfterDocId) throws LogException {
 
         GetLogsResponse getLogsResponse = new GetLogsResponse();
 
-        SearchHits<LogEntry> search = elasticQueryServices.getQueryForLogs(queryToken, app, who, className, instance,
-                op, fromtsStr, totsStr, ndays, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
+        try {
+            SearchHits<LogEntry> search = elasticQueryServices.getQueryForLogs(queryToken, app, who, className,
+                    instance,
+                    op, fromtsStr, totsStr, ndays, logType, remoteIP, pri, searchAfterTs, searchAfterDocId);
 
-        long totalHits = search.getTotalHits();
+            long totalHits = search.getTotalHits();
 
-        List<LogEntry> logEntries = search.getSearchHits().stream().map(SearchHit::getContent)
-                .limit(constants.getLogharbourMaxRecord()).toList();
-        if (constants.getLogharbourMaxRecord() <= totalHits) {
+            List<LogEntry> logEntries = search.getSearchHits().stream().map(SearchHit::getContent)
+                    .limit(constants.getLogharbourMaxRecord()).toList();
+            if (constants.getLogharbourMaxRecord() <= totalHits) {
+                getLogsResponse.setLogs(logEntries);
+                getLogsResponse.setNrec(totalHits);
+                return getLogsResponse;
+            }
             getLogsResponse.setLogs(logEntries);
             getLogsResponse.setNrec(totalHits);
             return getLogsResponse;
+        } catch (Exception e) {
+            throw new LogException("Failed to retrieve logs: " + e.getMessage());
         }
-        getLogsResponse.setLogs(logEntries);
-        getLogsResponse.setNrec(totalHits);
-        return getLogsResponse;
     }
 
     /**

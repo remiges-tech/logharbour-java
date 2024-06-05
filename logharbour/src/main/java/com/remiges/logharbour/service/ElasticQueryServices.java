@@ -75,7 +75,7 @@ public class ElasticQueryServices {
         addMatchPhraseQuery(boBuilder, LogharbourConstants.INSTANCE_ID, instance);
         addMatchPhraseQuery(boBuilder, LogharbourConstants.OP, op);
         addMatchPhraseQuery(boBuilder, LogharbourConstants.REMOTE_IP, remoteIP);
-        addMatchPhraseQuery(boBuilder, LogharbourConstants.PRIORITY, pri.toString());
+        // addMatchPhraseQuery(boBuilder, LogharbourConstants.PRIORITY, pri.toString());
         // if (app != null && !app.isEmpty()) {
         // boBuilder.must(MatchPhraseQuery.of(m ->
         // m.field(LogharbourConstants.APP).query(app))._toQuery());
@@ -104,46 +104,46 @@ public class ElasticQueryServices {
         // boBuilder.must(MatchPhraseQuery.of(m ->
         // m.field(LogharbourConstants.REMOTE_IP).query(remoteIP))._toQuery());
         // }
-        // if (logType != null && !logType.isEmpty()) {
-        // if (logType.equals("A")) {
-
-        // boBuilder.must(
-        // MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.LOG_TYPE).query("ACTIVITY"))._toQuery());
-        // } else if (logType.equals("C")) {
-        // boBuilder.must(
-        // MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
-        // } else if (logType.equals("D")) {
-        // boBuilder.must(
-        // MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.LOG_TYPE).query("DEBUG"))._toQuery());
-
-        // }
-        // }
-
-        // Define a map of logType to their corresponding log type string
-        Map<String, String> logTypeMap = new HashMap<>();
-        logTypeMap.put("A", "ACTIVITY");
-        logTypeMap.put("C", "CHANGE");
-        logTypeMap.put("D", "DEBUG");
-
-        // Check if logType is not null and not empty
         if (logType != null && !logType.isEmpty()) {
-            // Get the corresponding log type string from the map
-            String logTypeString = logTypeMap.get(logType);
+            if (logType.equals("A")) {
 
-            // If logTypeString is found, add the query
-            if (logTypeString != null) {
-                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query(logTypeString))
-                        ._toQuery());
+                boBuilder.must(
+                        MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("ACTIVITY"))._toQuery());
+            } else if (logType.equals("C")) {
+                boBuilder.must(
+                        MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
+            } else if (logType.equals("D")) {
+                boBuilder.must(
+                        MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("DEBUG"))._toQuery());
+
+            }else{
+                return null;
             }
         }
-        // if (pri != null) {
-        // boBuilder.must(
-        // MatchPhraseQuery.of(m ->
-        // m.field(LogharbourConstants.PRIORITY).query(pri.toString()))._toQuery());
+
+        // Define a map of logType to their corresponding log type string
+        // Map<String, String> logTypeMap = new HashMap<>();
+        // logTypeMap.put("A", "ACTIVITY");
+        // logTypeMap.put("C", "CHANGE");
+        // logTypeMap.put("D", "DEBUG");
+
+        // // Check if logType is not null and not empty
+        // if (logType != null && !logType.isEmpty()) {
+        // // Get the corresponding log type string from the map
+        // String logTypeString = logTypeMap.get(logType);
+
+        // // If logTypeString is found, add the query
+        // if (logTypeString != null) {
+        // boBuilder.must(MatchPhraseQuery.of(m ->
+        // m.field(LogharbourConstants.LOG_TYPE).query(logTypeString))
+        // ._toQuery());
         // }
+        // }
+
+        if (pri != null) {
+            boBuilder.must(
+                    MatchPhraseQuery.of(m -> m.field(LogharbourConstants.PRIORITY).query(pri.toString()))._toQuery());
+        }
 
         DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
         LocalDateTime fromts = fromtsStr != null && !fromtsStr.isEmpty() ? LocalDateTime.parse(fromtsStr, formatter)
