@@ -29,12 +29,34 @@ public class ElasticQueryServices {
 
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
-
+    
+    /**
+     * Retrieves log entries from Elasticsearch based on the provided query parameters.
+     *
+     * @param queryToken      The query token for authentication or identification.
+     * @param app             The application name to filter logs.
+     * @param who             The user identifier to filter logs.
+     * @param className       The class name to filter logs.
+     * @param instance        The instance identifier to filter logs.
+     * @param op              The operation type to filter logs.
+     * @param fromtsStr       The start timestamp for the time range filter.
+     * @param totsStr         The end timestamp for the time range filter.
+     * @param ndays           The number of days to filter logs from the current time.
+     * @param logType         The log type (e.g., "A" for activity, "C" for change).
+     * @param remoteIP        The remote IP address to filter logs.
+     * @param pri             The log priority to filter logs.
+     * @param searchAfterTs   The timestamp for pagination to fetch logs after the specified time.
+     * @param searchAfterDocId The document ID for pagination to fetch logs after the specified document.
+     * @return A {@link SearchHits} object containing the search results for log entries.
+     * @throws IllegalArgumentException If the end timestamp is before the start timestamp.
+     */
     public SearchHits<LogEntry> getQueryForLogs(String queryToken, String app, String who,
             String className, String instance,
             String op, String fromtsStr, String totsStr, int ndays, String logType,
             String remoteIP, LogEntry.LogPriority pri, String searchAfterTs,
             String searchAfterDocId) {
+
+        boolean totsReverse = false;
 
         BoolQuery.Builder boBuilder = new BoolQuery.Builder();
 
@@ -57,10 +79,19 @@ public class ElasticQueryServices {
         }
 
         if (remoteIP != null && !remoteIP.isEmpty()) {
+            
             boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.REMOTE_IP).query(remoteIP))._toQuery());
         }
         if (logType != null && !logType.isEmpty()) {
-            boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query(logType))._toQuery());
+            if(logType.equals("A")){
+
+                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("ACTIVITY"))._toQuery());
+            }else if (logType.equals("C")) {
+                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("CHANGE"))._toQuery());
+            }else{
+                boBuilder.must(MatchPhraseQuery.of(m -> m.field(LogharbourConstants.LOG_TYPE).query("DEBUG"))._toQuery());
+
+            }
         }
         if (pri != null) {
             boBuilder.must(
@@ -72,6 +103,7 @@ public class ElasticQueryServices {
                 : null;
         LocalDateTime tots = totsStr != null && !totsStr.isEmpty() ? LocalDateTime.parse(totsStr, formatter) : null;
 
+        addTimestampRangeQuery(boBuilder, fromtsStr, totsStr, ndays);
         if (fromts != null && tots != null) {
             if (tots.isAfter(fromts)) {
                 boBuilder.must(RangeQuery.of(
@@ -81,10 +113,12 @@ public class ElasticQueryServices {
                 throw new IllegalArgumentException("tots must be after fromts");
             }
         } else if (fromts != null) {
+
             boBuilder.must(RangeQuery.of(
                     m -> m.field(LogharbourConstants.WHEN).gte(JsonData.of(fromtsStr)))
                     ._toQuery());
         } else if (tots != null) {
+            totsReverse = true;
             boBuilder.must(RangeQuery.of(
                     m -> m.field(LogharbourConstants.WHEN).lte(JsonData.of(totsStr)))
                     ._toQuery());
@@ -98,11 +132,19 @@ public class ElasticQueryServices {
                     ._toQuery());
         }
 
+
         if (searchAfterTs != null && !searchAfterTs.isEmpty()) {
 
             boBuilder.must(RangeQuery.of(
                     m -> m.field(LogharbourConstants.WHEN).gt(JsonData.of(searchAfterTs)))
                     ._toQuery());
+
+        }
+        if (totsReverse) {
+            Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
+                    .withSort(s -> s.field(f -> f.field(LogharbourConstants.WHEN).order(SortOrder.Desc)))
+                    .build();
+            return elasticsearchOperations.search(query, LogEntry.class);
 
         }
         Query query = NativeQuery.builder().withQuery(boBuilder.build()._toQuery())
